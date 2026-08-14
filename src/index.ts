@@ -33,6 +33,37 @@ export function createBoxColorPicker(
   const showInputs = options.showInputs ?? false;
   const showModeToggle = options.showModeToggle ?? false;
   const showCorners = options.showCorners ?? false;
+
+  /** controls 模块回调（按需加载的输入框/模式/角按钮通过它驱动核心） */
+  const controlsCtx = {
+    mode: () => mode,
+    switchMode: (m: ColorMode) => switchMode(m),
+    onHexInput: (hex: string) => {
+      const rgb = hexToRgb(hex);
+      if (rgb) {
+        dotValues = rgbToValues(boxInverted ? { r: 255 - rgb.r, g: 255 - rgb.g, b: 255 - rgb.b } : rgb, mode);
+        boxExtent = { x: Math.max(boxExtent.x, dotValues.x), y: Math.max(boxExtent.y, dotValues.y), z: Math.max(boxExtent.z, dotValues.z) };
+        emitChange(); updateUI(); scheduleRender();
+      } else { updateUI(); }
+    },
+    onChannelInput: (i: number, val: number, max: number) => {
+      const clamped = Math.max(0, Math.min(max, val));
+      const keys: (keyof Vec3)[] = ['x', 'y', 'z'];
+      const normalized = clamped / max;
+      if (boxInverted) {
+        const dispVals = { ...dotValues, [keys[i]]: normalized };
+        const dispRgb = valuesToRgb(dispVals, mode);
+        dotValues = rgbToValues({ r: 255 - dispRgb.r, g: 255 - dispRgb.g, b: 255 - dispRgb.b }, mode);
+      } else {
+        dotValues = { ...dotValues, [keys[i]]: normalized };
+      }
+      if (normalized > boxExtent[keys[i]]) boxExtent = { ...boxExtent, [keys[i]]: normalized };
+      emitChange(); updateUI(); scheduleRender();
+    },
+    getRgbForCopy: () => valuesToRgb(dotValues, mode),
+    onRandom: (rgb: RGBColor) => setColor(rgb),
+    onReset: () => setColor({ r: 0, g: 0, b: 0 }),
+  };
   let mode: ColorMode = options.mode ?? 'rgb';
 
   // boxExtent: the box dimensions (0–1 per axis), controlled by axis handles.
@@ -62,149 +93,17 @@ export function createBoxColorPicker(
 
   // Controls (hex, swatch, mode toggle, channels) — only if enabled
   let swatch: HTMLDivElement | null = null;
-  let hexInput: HTMLInputElement | null = null;
-  const channelInputs: HTMLInputElement[] = [];
-  const channelLabels: HTMLLabelElement[] = [];
-
-  if (showControls) {
-    const controls = document.createElement('div');
-    controls.className = 'box-picker-controls';
-
-    swatch = document.createElement('div');
-    swatch.className = 'box-picker-swatch';
-
-    hexInput = document.createElement('input');
-    hexInput.className = 'box-picker-hex';
-    hexInput.type = 'text';
-    hexInput.spellcheck = false;
-
-
-    if (showModeToggle) {
-    const modeToggle = document.createElement('div');
-    modeToggle.className = 'box-picker-mode-toggle';
-    const rgbBtn = document.createElement('button');
-    rgbBtn.textContent = 'RGB';
-    const hsbBtn = document.createElement('button');
-    hsbBtn.textContent = 'HSB';
-    const oklchBtn = document.createElement('button');
-    oklchBtn.textContent = 'OKLCH';
-    modeToggle.appendChild(oklchBtn);
-    modeToggle.appendChild(rgbBtn);
-    modeToggle.appendChild(hsbBtn);
-
-
-
-    rgbBtn.addEventListener('click', () => switchMode('rgb'));
-    hsbBtn.addEventListener('click', () => switchMode('hsb'));
-    oklchBtn.addEventListener('click', () => switchMode('oklch'));
-
-    hexInput.addEventListener('change', () => {
-      const rgb = hexToRgb(hexInput!.value);
-      if (rgb) {
-        dotValues = rgbToValues(boxInverted ? { r: 255 - rgb.r, g: 255 - rgb.g, b: 255 - rgb.b } : rgb, mode);
-        boxExtent = {
-          x: Math.max(boxExtent.x, dotValues.x),
-          y: Math.max(boxExtent.y, dotValues.y),
-          z: Math.max(boxExtent.z, dotValues.z),
-        };
-        emitChange();
-        updateUI();
-        scheduleRender();
-      } else {
-        updateUI();
-      }
-    });
-
-    // 点击 hex 框 → 复制 hex 数值（仍可输入修改）
-    hexInput.addEventListener('click', () => {
-      const rgbNow = valuesToRgb(dotValues, mode);
-      copyToClipboard(rgbToHex(rgbNow) || '#ffffff');
-      flashInput(hexInput);
-    });
-
-    // Channel displays
-    if (showInputs) {
-    const channelRow = document.createElement('div');
-    channelRow.className = 'box-picker-channels';
-
-    for (let i = 0; i < 3; i++) {
-      const ch = document.createElement('div');
-      ch.className = 'box-picker-channel';
-      const label = document.createElement('label');
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.inputMode = 'numeric';
-      ch.appendChild(label);
-      ch.appendChild(input);
-      channelRow.appendChild(ch);
-      channelInputs.push(input);
-      channelLabels.push(label);
-
-      input.addEventListener('change', () => {
-        const max = AXIS_MAX[mode];
-        const val = parseFloat(input.value);
-        if (isNaN(val)) { updateUI(); return; }
-        const clamped = Math.max(0, Math.min(max[i], val));
-        const keys: (keyof Vec3)[] = ['x', 'y', 'z'];
-        const normalized = clamped / max[i];
-        if (boxInverted) {
-          // 输入的是反转布局的显示值：先还原几何坐标（显示 rgb 取反再映射回当前模式）
-          const dispVals = { ...dotValues, [keys[i]]: normalized };
-          const dispRgb = valuesToRgb(dispVals, mode);
-          dotValues = rgbToValues({ r: 255 - dispRgb.r, g: 255 - dispRgb.g, b: 255 - dispRgb.b }, mode);
-        } else {
-          dotValues = { ...dotValues, [keys[i]]: normalized };
-        }
-        if (normalized > boxExtent[keys[i]]) {
-          boxExtent = { ...boxExtent, [keys[i]]: normalized };
-        }
-        emitChange();
-        updateUI();
-        scheduleRender();
-      });
-
-      // 点击任意 RGB 数值框 → 复制所有 RGB 数值（仍可输入修改）
-      input.addEventListener('click', () => {
-        const rgbNow = valuesToRgb(dotValues, mode);
-        copyToClipboard(`${rgbNow.r}, ${rgbNow.g}, ${rgbNow.b}`);
-        flashInput(input);
-      });
-    }
-    // 布局：第一排实时色块 / 第二排 hex + 通道数值 / 第三排模式切换
-    controls.appendChild(swatch);
-    const hexRow = document.createElement('div');
-    hexRow.className = 'box-picker-hexrow';
-    // hex 框上方加 Hex 标签，与 R/G/B 标签平齐
-    const hexWrap = document.createElement('div');
-    hexWrap.className = 'box-picker-hexwrap';
-    const hexLabel = document.createElement('label');
-    hexLabel.textContent = 'Hex';
-    hexWrap.appendChild(hexLabel);
-    hexWrap.appendChild(hexInput);
-    // RGB 数值框在左（宽 = 模式区 2/3），HEX 在右（剩余 1/3）
-    hexRow.appendChild(channelRow);
-    hexRow.appendChild(hexWrap);
-    controls.appendChild(hexRow);
-    }
-    controls.appendChild(modeToggle);
-    }
-    root.appendChild(controls);
-    // 第二排宽度与模式按钮区对齐（RGB 区 2/3 + HEX 区 1/3）；rAF 重测确保布局后测量
-    try {
-      const toggle = controls.querySelector('.box-picker-mode-toggle') as HTMLElement | null;
-      const syncRow = (): void => { if (toggle && toggle.offsetWidth > 0) hexRow.style.width = toggle.offsetWidth + 'px'; };
-      syncRow();
-      requestAnimationFrame(() => syncRow());
-    } catch { /* ignore */ }
-
-    const updateModeButtons = () => {
-      rgbBtn.classList.toggle('active', mode === 'rgb');
-      hsbBtn.classList.toggle('active', mode === 'hsb');
-      oklchBtn.classList.toggle('active', mode === 'oklch');
-    };
-    updateModeButtons();
-    // Expose for updateUI
-    (root as any)._updateModeButtons = updateModeButtons;
+  const controls = document.createElement('div');
+  controls.className = 'box-picker-controls';
+  swatch = document.createElement('div');
+  swatch.className = 'box-picker-swatch';
+  controls.appendChild(swatch);
+  root.appendChild(controls);
+  // 可选控件（输入框/模式按钮/角按钮）按需加载——核心包保持精简
+  if (showInputs || showModeToggle || showCorners) {
+    import('./controls').then((m) => {
+      m.createControls(controls, controlsCtx, { showInputs, showModeToggle, showCorners });
+    }).catch(() => { /* ignore */ });
   }
 
   container.appendChild(root);
@@ -363,7 +262,8 @@ export function createBoxColorPicker(
     const rgb = displayRgb();
     const hex = rgbToHex(rgb);
     if (swatch) renderSwatchBox(swatch, hex);
-    if (hexInput) hexInput.value = hex;
+    const hexEl = root.querySelector<HTMLInputElement>('.box-picker-hex');
+    if (hexEl) hexEl.value = hex;
     updateChannelValues();
     if ((root as any)._updateModeButtons) (root as any)._updateModeButtons();
   }
@@ -373,11 +273,13 @@ export function createBoxColorPicker(
     const labels = AXIS_LABELS[mode];
     const dispValues = boxInverted ? rgbToValues(displayRgb(), mode) : dotValues;
     const channels = valuesToChannels(dispValues, mode);
-    for (let i = 0; i < channelInputs.length; i++) {
-      channelLabels[i].textContent = labels[i];
-      channelLabels[i].style.color = ''; // 标签统一默认灰（不需要通道色）
-      channelLabels[i].style.textShadow = 'none';
-      channelInputs[i].value = String(channels[i]);
+    const inputs = root.querySelectorAll<HTMLInputElement>('.box-picker-channel input');
+    const lbls = root.querySelectorAll<HTMLLabelElement>('.box-picker-channel label');
+    for (let i = 0; i < inputs.length; i++) {
+      lbls[i].textContent = labels[i];
+      lbls[i].style.color = '';
+      lbls[i].style.textShadow = 'none';
+      inputs[i].value = String(channels[i]);
     }
   }
 
@@ -425,31 +327,6 @@ export function createBoxColorPicker(
 
   };
 
-  // 角按钮（showCorners 时）：左下随机色 / 右下 Reset（贴组件角部，hover 显示）
-  if (showCorners) {
-    const rndBtn = document.createElement('button');
-    rndBtn.className = 'box-corner-btn box-corner-left';
-    rndBtn.title = 'Random color';
-    rndBtn.setAttribute('aria-label', 'Random color');
-    rndBtn.innerHTML = '<svg viewBox="0 0 24 24" width="42" height="42"><path d="M0 10.5 Q0 24 10.5 24 L22 24 L0 2 Z"/></svg>';
-    rndBtn.addEventListener('click', () => {
-      const r = Math.floor(Math.random() * 256);
-      const g = Math.floor(Math.random() * 256);
-      const b = Math.floor(Math.random() * 256);
-      setColor({ r, g, b });
-    });
-    root.appendChild(rndBtn);
-    const rstBtn = document.createElement('button');
-    rstBtn.className = 'box-corner-btn box-corner-right';
-    rstBtn.title = 'Reset';
-    rstBtn.setAttribute('aria-label', 'Reset');
-    rstBtn.innerHTML = '<svg viewBox="0 0 24 24" width="42" height="42"><path d="M24 10.5 Q24 24 13.5 24 L2 24 L24 2 Z"/></svg>';
-    rstBtn.addEventListener('click', () => {
-      // Reset = 指示器回中心，取当前布局下中心位置的颜色
-      setColor({ r: 0, g: 0, b: 0 });
-    });
-    root.appendChild(rstBtn);
-  }
   return {
     getColor,
     getMode: () => mode,
