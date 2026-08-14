@@ -1,14 +1,14 @@
 // @ambient-ui/color-is-box — color model parse/format adapters (vanilla-colorful style)
 import { rgbToHsb, hsbToRgb, rgbToOklch, oklchToRgb, rgbToHex, hexToRgb } from './color-math';
 
-export type ColorModel = 'hex' | 'rgb' | 'hsl' | 'hsv' | 'oklch';
+export type ColorModel = 'hex' | 'rgb' | 'hsl' | 'hsv' | 'oklch' | 'hex-alpha' | 'rgba' | 'hsla' | 'hsva';
 export type RGB = { r: number; g: number; b: number };
 
-export function parseModelValue(v: string, model: ColorModel): RGB | null {
+export interface ModelValue { rgb: RGB; alpha: number; }\n\nexport function parseModelValue(v: string, model: ColorModel): ModelValue | null {
   if (!v) return null;
   const s = v.trim();
   try {
-    if (model === 'hex') return hexToRgb(s);
+    if (model === 'hex') return { rgb: hexToRgb(s)!, alpha: 1 };\n    if (model === 'hex-alpha') {\n      const m = s.match(/^#?([0-9a-f]{6})([0-9a-f]{2})?$/i);\n      if (!m) return null;\n      const rgb = hexToRgb(m[1])!;\n      const a = m[2] ? parseInt(m[2], 16) / 255 : 1;\n      return { rgb, alpha: a };\n    }
     if (model === 'rgb') {
       const m = s.match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
       if (m) return { r: +m[1], g: +m[2], b: +m[3] };
@@ -33,8 +33,8 @@ export function parseModelValue(v: string, model: ColorModel): RGB | null {
   return null;
 }
 
-export function formatModelValue(rgb: RGB, model: ColorModel): string {
-  if (model === 'hex') return rgbToHex(rgb);
+export function formatModelValue(rgb: RGB, model: ColorModel, alpha = 1): string {
+  if (model === 'hex') return rgbToHex(rgb);\n  if (model === 'hex-alpha') return rgbToHex(rgb) + (alpha < 1 ? Math.round(alpha * 255).toString(16).padStart(2, '0') : '');
   if (model === 'rgb') return `${rgb.r}, ${rgb.g}, ${rgb.b}`;
   if (model === 'hsl') {
     const h = rgbToHsl(rgb);
