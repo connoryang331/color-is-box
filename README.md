@@ -6,25 +6,20 @@ tiny, framework-agnostic, works everywhere.
 
 ## Features
 
-- 🗜 **Small**: ~9 KB minified + gzipped (3D cube renderer, 3 color spaces, CSS inlined)
-- 🚀 **Fast**: standards-based Custom Element, no framework needed
-- 🛡 **Bulletproof**: strict TypeScript, zero dependencies
-- 🗂 **Typed**: types included
-- 😍 **Simple**: one tag or one function call
-- 💬 **Accessible**: aria-labels on interactive controls, keyboard operable
-- 📲 **Mobile-friendly**: pointer events + touch-action for touch screens
-- 👫 **Framework-agnostic**: works with React / Vue / Svelte / vanilla
-- 💨 **No dependencies**: plain DOM + Canvas only
-
-
-- 3D color cube (isometric hexagon) with drag-to-pick on faces and axes
-- RGB / HSB / OKLCH modes (switch axes, letters follow color positions)
-- Double-click inverts the whole cube (white ↔ black)
-- Corner buttons: random color (left) / reset to center (right)
-- Hex / channel inputs (click to copy, type to set), theme-aware
-- Web Component: `<color-is-box>` + vanilla JS API
-- Zero dependencies, zero build needed (IIFE) — also ESM + source
-
+- 🧊 **3D color cube** (isometric hexagon) — drag to pick on faces and axes
+- 🎨 **RGB / HSB / OKLCH modes** — switch axes, letters follow color positions
+- 🔄 **Double-click inverts** the whole cube (white ↔ black)
+- 🎲 **Corner buttons** — random color (left) / reset to center (right)
+- ⌨️ **Hex / channel inputs** — click to copy, type to set, theme-aware
+- 🔌 **Web Component** `<color-is-box>` + vanilla JS API
+- 🗜 **Small** — ~9 KB minified + gzipped (cube renderer, 3 spaces, CSS inlined)
+- 🚀 **Fast** — standards-based Custom Element
+- 🛡 **Bulletproof** — strict TypeScript, tests included (`npm test`)
+- 🗂 **Typed** — types included
+- 💬 **Accessible** — aria-labels, keyboard operable
+- 📲 **Mobile-friendly** — touch-action support for touch screens
+- 👫 **Framework-agnostic** — React / Vue / Svelte / vanilla
+- 💨 **Zero dependencies, zero build needed** (IIFE) — also ESM + source
 ## Usage — Web Component
 
 ```html
