@@ -1,7 +1,7 @@
 # color-is-box
 
 Zero-dependency 3D **RGB / HSB / OKLCH** color picker — a color cube rendered as an
-isometric hexagon. Inspired by [vanilla-colorful](https://github.com/web-padawan/vanilla-colorful):
+isometric hexagon. Tiny, framework-agnostic, works everywhere.
 tiny, framework-agnostic, works everywhere.
 
 ## Features
@@ -41,7 +41,7 @@ tiny, framework-agnostic, works everywhere.
 | Event | Detail |
 | --- | --- |
 | `change` | full `ColorOutput` `{ rgb, hsb, oklch, hex }` |
-| `color-changed` | hex string (vanilla-colorful compatible name) |
+| color-changed | hex string |
 
 ## Usage — JS API
 
@@ -78,5 +78,5 @@ Double-click `demo/index.html` or `demo/web-component.html` (no server needed).
 
 ## Inspiration
 
-API shape follows [vanilla-colorful](https://github.com/web-padawan/vanilla-colorful)
+## API
 (value attribute, change/color-changed events, tiny zero-dep footprint).
