@@ -1,6 +1,7 @@
-// @ambient-ui/color-is-box — Web Component wrapper
+// @ambient-ui/color-is-box — Web Component wrappers (vanilla-colorful style color models)
 import { createColorPicker } from './index';
 import type { ColorMode } from './types';
+import { parseModelValue, formatModelValue, type ColorModel } from './formats';
 // 同时导出 JS API（?module 一个入口同时提供元素注册与 createColorPicker）
 export * from './index';
 
@@ -11,10 +12,16 @@ function hexToRgbSafe(hex: string): { r: number; g: number; b: number } {
   return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
 }
 
-export class ColorIsBoxElement extends HTMLElement {
+class ColorIsBoxModelElement extends HTMLElement {
   private holder: HTMLElement | null = null;
   private picker: ReturnType<typeof createColorPicker> | null = null;
   private internal = false;
+  private model: ColorModel;
+
+  constructor(model: ColorModel) {
+    super();
+    this.model = model;
+  }
 
   static get observedAttributes(): string[] { return ['value', 'mode', 'size']; }
 
@@ -23,8 +30,12 @@ export class ColorIsBoxElement extends HTMLElement {
     this.holder = document.createElement('div');
     this.appendChild(this.holder);
     const size = parseInt(this.getAttribute('size') || '280', 10);
+    const mode = (this.getAttribute('mode') as ColorMode) || 'rgb';
+    const initial = this.getAttribute('value')
+      ? parseModelValue(this.getAttribute('value')!, this.model) ?? { r: 255, g: 255, b: 255 }
+      : { r: 255, g: 255, b: 255 };
     this.picker = createColorPicker(this.holder, {
-      initialColor: hexToRgbSafe(this.getAttribute('value') || '#ffffff'),
+      initialColor: initial,
       size,
       controls: true,
       showInputs: this.getAttribute('show-inputs') === 'true',
@@ -34,22 +45,25 @@ export class ColorIsBoxElement extends HTMLElement {
     this.picker.on('change', (c: any) => {
       if (this.internal) return;
       this.internal = true;
-      this.setAttribute('value', c.hex);
+      this.setAttribute('value', formatModelValue(c.rgb, this.model));
       this.internal = false;
       this.dispatchEvent(new CustomEvent('change', { detail: c }));
-      this.dispatchEvent(new CustomEvent('color-changed', { detail: c.hex }));
+      this.dispatchEvent(new CustomEvent('color-changed', { detail: formatModelValue(c.rgb, this.model) }));
     });
-    const mode = this.getAttribute('mode') as ColorMode | null;
     if (mode) this.picker.setMode(mode);
   }
 
   attributeChangedCallback(name: string, _o: string | null, val: string | null): void {
     if (!this.picker || !val || this.internal) return;
-    if (name === 'value') this.picker.setColor(hexToRgbSafe(val));
-    else if (name === 'mode') this.picker.setMode(val as ColorMode);
+    if (name === 'value') {
+      const rgb = parseModelValue(val, this.model);
+      if (rgb) this.picker.setColor(rgb);
+    } else if (name === 'mode') {
+      this.picker.setMode(val as ColorMode);
+    }
   }
 
-  get value(): string { return this.getAttribute('value') || '#ffffff'; }
+  get value(): string { return this.getAttribute('value') || formatModelValue({ r: 255, g: 255, b: 255 }, this.model); }
   set value(v: string) { this.setAttribute('value', v); }
   get mode(): ColorMode { return (this.getAttribute('mode') as ColorMode) || 'rgb'; }
   set mode(m: ColorMode) { this.setAttribute('mode', m); }
@@ -61,7 +75,20 @@ export class ColorIsBoxElement extends HTMLElement {
   }
 }
 
-if (!customElements.get('color-is-box')) {
-  customElements.define('color-is-box', ColorIsBoxElement);
+export class ColorIsBoxElement extends ColorIsBoxModelElement {
+  constructor() { super('hex'); }
+}
+
+const MODELS: Array<[string, ColorModel]> = [
+  ['color-is-box', 'hex'],
+  ['color-is-box-rgb', 'rgb'],
+  ['color-is-box-hsl', 'hsl'],
+  ['color-is-box-hsv', 'hsv'],
+  ['color-is-box-oklch', 'oklch'],
+];
+for (const [tag, model] of MODELS) {
+  if (!customElements.get(tag)) {
+    customElements.define(tag, class extends ColorIsBoxModelElement { constructor() { super(model); } });
+  }
 }
 export default ColorIsBoxElement;
