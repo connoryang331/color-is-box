@@ -1,4 +1,4 @@
-# @connor_yang331/color-is-box
+# color-is-box
 
 Zero-dependency 3D **RGB / HSB / OKLCH** color picker — a color cube rendered as an
 isometric hexagon. Inspired by [vanilla-colorful](https://github.com/web-padawan/vanilla-colorful):
@@ -17,7 +17,7 @@ tiny, framework-agnostic, works everywhere.
 ## Usage — Web Component (vanilla-colorful style)
 
 ```html
-<script src="https://unpkg.com/@connor_yang331/color-is-box/dist/color-is-box-element.iife.js"></script>
+<script src="https://unpkg.com/color-is-box/dist/color-is-box-element.iife.js"></script>
 
 <color-is-box value="#ff0000" mode="hsb" size="300"></color-is-box>
 <script>
