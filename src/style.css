@@ -1,4 +1,13 @@
 .box-picker {
+  /* vanilla-colorful style theme variables */
+  --cib-accent: #007AFF;
+  --cib-accent-hover: #0071EB;
+  --cib-bg: var(--background-primary, #ffffff);
+  --cib-surface: var(--background-secondary, #f2f3f5);
+  --cib-border: var(--background-modifier-border, #d0d7de);
+  --cib-text: var(--text-normal, #333333);
+  --cib-muted: var(--text-muted, #666666);
+
   display: inline-flex;
   flex-direction: column;
   align-items: center;
@@ -187,7 +196,16 @@
 
 
 /* ==== Obsidian 主题适配（覆盖深色默认；用 Obsidian 变量，自适应浅/深主题） ==== */
-.box-picker { color: var(--text-normal, #1a1a1a); }
+.box-picker {
+  /* vanilla-colorful style theme variables */
+  --cib-accent: #007AFF;
+  --cib-accent-hover: #0071EB;
+  --cib-bg: var(--background-primary, #ffffff);
+  --cib-surface: var(--background-secondary, #f2f3f5);
+  --cib-border: var(--background-modifier-border, #d0d7de);
+  --cib-text: var(--text-normal, #333333);
+  --cib-muted: var(--text-muted, #666666);
+ color: var(--text-normal, #1a1a1a); }
 .box-picker-swatch { border-color: var(--background-modifier-border, #d0d7de); }
 .box-picker-hex {
   background: var(--background-primary, #fff);

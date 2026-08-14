@@ -1,13 +1,18 @@
 {
   "name": "@ambient-ui/color-is-box",
   "version": "1.0.0",
-  "description": "Zero-dependency 3D RGB/HSB/OKLCH color picker (shadcn-style standalone source, no Univer/Obsidian)",
+  "description": "Zero-dependency 3D RGB/HSB/OKLCH color picker — Web Component + JS API, vanilla-colorful style",
   "type": "module",
   "main": "dist/color-is-box.js",
-  "scripts": {
-    "build": "node build.mjs"
+  "module": "dist/color-is-box.js",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./dist/color-is-box.js",
+    "./element": "./dist/color-is-box-element.js"
   },
-  "devDependencies": {
-    "esbuild": "^0.25.0"
-  }
+  "files": ["dist", "src", "README.md"],
+  "keywords": ["color-picker", "web-component", "zero-dependency", "oklch", "hsb", "rgb", "custom-element"],
+  "license": "MIT",
+  "scripts": { "build": "node build.mjs" },
+  "devDependencies": { "esbuild": "^0.25.0" }
 }
