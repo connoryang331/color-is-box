@@ -1,4 +1,4 @@
-// @ambient-ui/color-is-box — Web Component wrapper (vanilla-colorful style)
+// @ambient-ui/color-is-box — Web Component wrapper
 import { createColorPicker } from './index';
 import type { ColorMode } from './types';
 

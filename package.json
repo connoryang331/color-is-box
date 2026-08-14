@@ -1,7 +1,7 @@
 {
   "name": "color-is-box",
   "version": "1.0.0",
-  "description": "Zero-dependency 3D RGB/HSB/OKLCH color picker — Web Component + JS API, vanilla-colorful style",
+  "description": "Zero-dependency 3D RGB/HSB/OKLCH color picker — Web Component + JS API",
   "type": "module",
   "main": "dist/color-is-box.js",
   "module": "dist/color-is-box.js",

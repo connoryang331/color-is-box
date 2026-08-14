@@ -14,7 +14,7 @@ tiny, framework-agnostic, works everywhere.
 - Web Component: `<color-is-box>` + vanilla JS API
 - Zero dependencies, zero build needed (IIFE) — also ESM + source
 
-## Usage — Web Component (vanilla-colorful style)
+## Usage — Web Component
 
 ```html
 <script src="https://unpkg.com/color-is-box/dist/color-is-box-element.iife.js"></script>
