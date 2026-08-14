@@ -1,6 +1,8 @@
 // @ambient-ui/color-is-box — Web Component wrapper
 import { createColorPicker } from './index';
-import type { ColorMode } from './types';\n// 同时导出 JS API（这样 ?module 一个入口同时提供元素注册与 createColorPicker）\nexport * from './index';
+import type { ColorMode } from './types';
+// 同时导出 JS API（?module 一个入口同时提供元素注册与 createColorPicker）
+export * from './index';
 
 function hexToRgbSafe(hex: string): { r: number; g: number; b: number } {
   const m = hex.match(/^#?([0-9a-f]{6})$/i);
