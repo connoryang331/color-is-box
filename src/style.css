@@ -42,8 +42,8 @@
 .box-corner-btn svg { width: 42px; height: 42px; fill: var(--interactive-accent, #7B8CDE); } /* 跟随 Obsidian 主题强调色 */ /* 靛蓝水滴（参考图样式） */
 /* 弹层整体 hover 时角按钮即浮现（无需精确悬停按钮本身） */
 /* 各自角 hover 才出现：hover 右下角 → 右下按钮；hover 左下角 → 左下按钮（不整体同时出现） */
-.osheet-tb-box:hover .box-corner-left, .box-picker:hover .box-corner-left, .box-corner-left:hover { opacity: 1; }
-.osheet-tb-box:hover .box-corner-right, .box-picker:hover .box-corner-right, .box-corner-right:hover { opacity: 1; }
+.box-corner-left, .box-picker:hover .box-corner-left, .box-corner-left:hover { opacity: 1; }
+.box-corner-right, .box-picker:hover .box-corner-right, .box-corner-right:hover { opacity: 1; }
 .box-corner-btn:hover { opacity: 1; background: var(--background-modifier-hover, rgba(0,0,0,0.07)); }
 .box-corner-btn:hover svg { fill: var(--interactive-accent-hover, #5A6CC8); }
 .box-corner-btn, .box-corner-btn:hover, .box-corner-btn:focus, .box-corner-btn:active {
