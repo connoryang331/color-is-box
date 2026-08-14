@@ -76,7 +76,4 @@ npm run build   # esbuild → 4 bundles (component + element, ESM + IIFE)
 
 Double-click `demo/index.html` or `demo/web-component.html` (no server needed).
 
-## Inspiration
 
-## API
-(value attribute, change/color-changed events, tiny zero-dep footprint).
