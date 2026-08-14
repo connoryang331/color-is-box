@@ -30,6 +30,9 @@ export function createBoxColorPicker(
 ): BoxColorPicker {
   const size = options.size ?? 300;
   const showControls = options.controls ?? true;
+  const showInputs = options.showInputs ?? false;
+  const showModeToggle = options.showModeToggle ?? false;
+  const showCorners = options.showCorners ?? false;
   let mode: ColorMode = options.mode ?? 'rgb';
 
   // boxExtent: the box dimensions (0–1 per axis), controlled by axis handles.
@@ -76,6 +79,7 @@ export function createBoxColorPicker(
     hexInput.spellcheck = false;
 
 
+    if (showModeToggle) {
     const modeToggle = document.createElement('div');
     modeToggle.className = 'box-picker-mode-toggle';
     const rgbBtn = document.createElement('button');
@@ -119,6 +123,7 @@ export function createBoxColorPicker(
     });
 
     // Channel displays
+    if (showInputs) {
     const channelRow = document.createElement('div');
     channelRow.className = 'box-picker-channels';
 
@@ -180,7 +185,9 @@ export function createBoxColorPicker(
     hexRow.appendChild(channelRow);
     hexRow.appendChild(hexWrap);
     controls.appendChild(hexRow);
+    }
     controls.appendChild(modeToggle);
+    }
     root.appendChild(controls);
     // 第二排宽度与模式按钮区对齐（RGB 区 2/3 + HEX 区 1/3）；rAF 重测确保布局后测量
     try {
@@ -418,8 +425,8 @@ export function createBoxColorPicker(
 
   };
 
-  // 角按钮（controls 时）：左下随机色 / 右下 Reset（贴组件角部，hover 显示）
-  if (showControls) {
+  // 角按钮（showCorners 时）：左下随机色 / 右下 Reset（贴组件角部，hover 显示）
+  if (showCorners) {
     const rndBtn = document.createElement('button');
     rndBtn.className = 'box-corner-btn box-corner-left';
     rndBtn.title = 'Random color';

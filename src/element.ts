@@ -25,6 +25,9 @@ export class ColorIsBoxElement extends HTMLElement {
       initialColor: hexToRgbSafe(this.getAttribute('value') || '#ffffff'),
       size,
       controls: true,
+      showInputs: true,
+      showModeToggle: true,
+      showCorners: true,
     });
     this.picker.on('change', (c: any) => {
       if (this.internal) return;

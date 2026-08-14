@@ -51,7 +51,10 @@ export interface PickerOptions {
   initialColor?: RGBColor;
   mode?: ColorMode;
   size?: number; // viewport size in px (square), default 300
-  controls?: boolean; // show hex, channels, mode toggle (default true)
+  controls?: boolean;
+  showInputs?: boolean;
+  showModeToggle?: boolean;
+  showCorners?: boolean;
 }
 
 /** The color output emitted on change events. */
