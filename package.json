@@ -1,10 +1,10 @@
 {
   "name": "color-is-box",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Zero-dependency 3D RGB/HSB/OKLCH color picker — Web Component + JS API",
   "type": "module",
   "main": "dist/color-is-box.js",
-  "module": "dist/color-is-box.js",
+  "module": "dist/color-is-box-element.js",
   "types": "src/index.ts",
   "exports": {
     ".": "./dist/color-is-box.js",
