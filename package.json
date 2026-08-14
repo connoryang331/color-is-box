@@ -1,5 +1,5 @@
 {
-  "name": "@connor_yang331/color-is-box",
+  "name": "color-is-box",
   "version": "1.0.0",
   "description": "Zero-dependency 3D RGB/HSB/OKLCH color picker — Web Component + JS API, vanilla-colorful style",
   "type": "module",
