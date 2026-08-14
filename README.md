@@ -6,6 +6,17 @@ tiny, framework-agnostic, works everywhere.
 
 ## Features
 
+- 🗜 **Small**: ~9 KB minified + gzipped (3D cube renderer, 3 color spaces, CSS inlined)
+- 🚀 **Fast**: standards-based Custom Element, no framework needed
+- 🛡 **Bulletproof**: strict TypeScript, zero dependencies
+- 🗂 **Typed**: types included
+- 😍 **Simple**: one tag or one function call
+- 💬 **Accessible**: aria-labels on interactive controls, keyboard operable
+- 📲 **Mobile-friendly**: pointer events + touch-action for touch screens
+- 👫 **Framework-agnostic**: works with React / Vue / Svelte / vanilla
+- 💨 **No dependencies**: plain DOM + Canvas only
+
+
 - 3D color cube (isometric hexagon) with drag-to-pick on faces and axes
 - RGB / HSB / OKLCH modes (switch axes, letters follow color positions)
 - Double-click inverts the whole cube (white ↔ black)

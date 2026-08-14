@@ -423,6 +423,7 @@ export function createBoxColorPicker(
     const rndBtn = document.createElement('button');
     rndBtn.className = 'box-corner-btn box-corner-left';
     rndBtn.title = 'Random color';
+    rndBtn.setAttribute('aria-label', 'Random color');
     rndBtn.innerHTML = '<svg viewBox="0 0 24 24" width="42" height="42"><path d="M0 10.5 Q0 24 10.5 24 L22 24 L0 2 Z"/></svg>';
     rndBtn.addEventListener('click', () => {
       const r = Math.floor(Math.random() * 256);
@@ -434,6 +435,7 @@ export function createBoxColorPicker(
     const rstBtn = document.createElement('button');
     rstBtn.className = 'box-corner-btn box-corner-right';
     rstBtn.title = 'Reset';
+    rstBtn.setAttribute('aria-label', 'Reset');
     rstBtn.innerHTML = '<svg viewBox="0 0 24 24" width="42" height="42"><path d="M24 10.5 Q24 24 13.5 24 L2 24 L24 2 Z"/></svg>';
     rstBtn.addEventListener('click', () => {
       // Reset = 指示器回中心，取当前布局下中心位置的颜色

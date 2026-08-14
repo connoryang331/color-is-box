@@ -13,6 +13,6 @@
   "files": ["dist", "src", "README.md"],
   "keywords": ["color-picker", "web-component", "zero-dependency", "oklch", "hsb", "rgb", "custom-element"],
   "license": "MIT",
-  "scripts": { "build": "node build.mjs" },
+  "scripts": { "build": "node build.mjs", "test": "node --test test/" },
   "devDependencies": { "esbuild": "^0.25.0" }
 }

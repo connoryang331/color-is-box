@@ -19,6 +19,7 @@
 
 .box-picker canvas {
   display: block;
+  touch-action: none; /* mobile-friendly drag */
   border-radius: 8px;
   outline: none;
 }
