@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color Is Box — Web Component demo</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f3f4f6; margin: 0; padding: 48px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
+  h1 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #374151; }
+  .row { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px 20px; box-shadow: 0 6px 20px rgba(0,0,0,.07); }
+  h3 { margin: 0 0 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; }
+  #out { font: 12px/1.6 ui-monospace, monospace; color: #111827; white-space: pre; margin: 0; }
+  .hint { font-size: 12px; color: #9ca3af; }
+  code { background: #f0f0f2; border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <h1>Color Is Box — Web Component</h1>
+  <div class="row">
+    <div class="panel">
+      <h3>&lt;color-is-box&gt;</h3>
+      <color-is-box id="picker" value="#ff0000" mode="rgb" size="340"></color-is-box>
+    </div>
+    <div class="panel">
+      <h3>Events / value</h3>
+      <pre id="out"></pre>
+      <p class="hint">Change the attribute to set color:<br>
+      <code id="setbtn" style="cursor:pointer;color:#2563eb">set value="#008fa0"</code></p>
+    </div>
+  </div>
+  <script src="../dist/color-is-box-element.iife.js"></script>
+  <script>
+    const picker = document.getElementById('picker');
+    const out = document.getElementById('out');
+    const show = (c) => { out.textContent =
+      'attribute value: ' + picker.value + '\n' +
+      'HEX:   ' + c.hex + '\n' +
+      'RGB:   ' + c.rgb.r + ', ' + c.rgb.g + ', ' + c.rgb.b + '\n' +
+      'HSB:   ' + c.hsb.h.toFixed(1) + ', ' + c.hsb.s.toFixed(1) + ', ' + c.hsb.b.toFixed(1) + '\n' +
+      'OKLCH: ' + c.oklch.l.toFixed(3) + ', ' + c.oklch.c.toFixed(3) + ', ' + c.oklch.h.toFixed(1);
+    };
+    picker.addEventListener('change', (e) => show(e.detail));
+    document.getElementById('setbtn').addEventListener('click', () => { picker.value = '#008fa0'; });
+    setTimeout(() => show({ hex: picker.value, rgb: {}, hsb: {}, oklch: {} }), 300);
+  </script>
+</body>
+</html>

@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Color Is Box — standalone demo</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 40px; margin: 0; background: #f3f4f6; box-sizing: border-box; }
+  .center-col { display: flex; flex-direction: column; align-items: center; gap: 0; }
+  h1 { margin: 0 0 16px; font-size: 18px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #374151; text-align: center; }
+  .subtitle { margin: 14px 0 0; font-size: 12px; font-weight: 400; letter-spacing: .04em; color: #9ca3af; text-align: center; }
+  .panel-holder { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.07); padding: 0; overflow: hidden; }
+  .panel-info { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px 24px; box-shadow: 0 6px 20px rgba(0,0,0,.07); width: 300px; min-height: 252px; box-sizing: border-box; display: flex; flex-direction: column; }
+  #current-card { position: fixed; right: 24px; bottom: 24px; }
+  #how-card { position: fixed; left: 24px; bottom: 24px; }
+  h3 { margin: 0 0 16px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; }
+  .rows { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 0; }
+  .row .label { font-size: 13px; font-weight: 600; color: #6b7280; letter-spacing: .01em; }
+  .row .val { font: 12.5px/1.5 ui-monospace, "SF Mono", "Cascadia Code", monospace; color: #111827; letter-spacing: .01em; }
+  .tips { margin: 0; padding: 0; list-style: none; font-size: 12.5px; line-height: 1.6; color: #374151; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .tips li { padding: 9px 0; display: flex; gap: 8px; }
+  .tips li::before { content: "·"; color: #7c3aed; font-weight: 700; }
+</style>
+</head>
+<body>
+  <div class="panel-info" id="current-card">
+    <h3>Current color</h3>
+    <div class="rows">
+      <div class="row"><span class="label">HEX</span><span class="val" id="v-hex">#ffffff</span></div>
+      <div class="row"><span class="label">RGB</span><span class="val" id="v-rgb">255, 255, 255</span></div>
+      <div class="row"><span class="label">HSB</span><span class="val" id="v-hsb">0.0, 0.0, 100.0</span></div>
+      <div class="row"><span class="label">OKLCH</span><span class="val" id="v-oklch">1.000, 0.000, 0.0</span></div>
+    </div>
+  </div>
+  <div class="center-col">
+    <h1>Color Is Box</h1>
+    <div class="panel-holder"><div id="holder"></div></div>
+    <p class="subtitle">Box color picker</p>
+  </div>
+  <div class="panel-info" id="how-card">
+    <h3>How to use</h3>
+    <ul class="tips">
+      <li>Double-click the picker to invert colors (white ↔ black)</li>
+      <li>RGB is actually a button — drag along the XYZ axes to pick colors</li>
+      <li>RGB letters show/hide randomly on hover — handy for screenshots</li>
+      <li>Hover the picker to reveal corner buttons: ◣ Random color · ◢ Reset</li>
+    </ul>
+  </div>
+  <script src="../dist/color-is-box.iife.js"></script>
+  <script>
+    const holder = document.getElementById('holder');
+    const picker = ColorIsBox.createColorPicker(holder, { initialColor: { r: 255, g: 255, b: 255 }, size: 460, controls: true });
+    const show = (c) => {
+      document.getElementById('v-hex').textContent = c.hex;
+      document.getElementById('v-rgb').textContent = c.rgb.r + ', ' + c.rgb.g + ', ' + c.rgb.b;
+      document.getElementById('v-hsb').textContent = c.hsb.h.toFixed(1) + ', ' + c.hsb.s.toFixed(1) + ', ' + c.hsb.b.toFixed(1);
+      document.getElementById('v-oklch').textContent = c.oklch.l.toFixed(3) + ', ' + c.oklch.c.toFixed(3) + ', ' + c.oklch.h.toFixed(1);
+    };
+    picker.on('change', show);
+    show(picker.getColor());
+    // 两卡等高（以内容较高者为准，内容自适应不截断）
+    const syncHeights = () => {
+      const a = document.getElementById('current-card');
+      const b = document.getElementById('how-card');
+      const h = Math.max(a.offsetHeight, b.offsetHeight);
+      a.style.height = h + 'px';
+      b.style.height = h + 'px';
+    };
+    window.addEventListener('load', syncHeights);
+    setTimeout(syncHeights, 100);
+  </script>
+</body>
+</html>

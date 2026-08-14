@@ -1,0 +1,227 @@
+.box-picker {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #e0e0e0;
+}
+
+.box-picker canvas {
+  display: block;
+  border-radius: 8px;
+  outline: none;
+}
+
+.box-corner-btn {
+  position: absolute;
+  bottom: 0;
+  width: 42px;
+  height: 42px;
+  border: none;
+  background: transparent;
+  display: block;
+  cursor: pointer;
+  padding: 0;
+  z-index: 5;
+  border-radius: 8px;
+  opacity: 0; /* 默认与背景同色（融入），hover 才显示 */
+  transition: opacity 0.15s, background 0.15s;
+}
+.box-corner-btn svg { width: 42px; height: 42px; fill: var(--interactive-accent, #7B8CDE); } /* 跟随 Obsidian 主题强调色 */ /* 靛蓝水滴（参考图样式） */
+/* 弹层整体 hover 时角按钮即浮现（无需精确悬停按钮本身） */
+/* 各自角 hover 才出现：hover 右下角 → 右下按钮；hover 左下角 → 左下按钮（不整体同时出现） */
+.osheet-tb-box:hover .box-corner-left, .box-picker:hover .box-corner-left, .box-corner-left:hover { opacity: 1; }
+.osheet-tb-box:hover .box-corner-right, .box-picker:hover .box-corner-right, .box-corner-right:hover { opacity: 1; }
+.box-corner-btn:hover { opacity: 1; background: var(--background-modifier-hover, rgba(0,0,0,0.07)); }
+.box-corner-btn:hover svg { fill: var(--interactive-accent-hover, #5A6CC8); }
+.box-corner-btn, .box-corner-btn:hover, .box-corner-btn:focus, .box-corner-btn:active {
+  border: none !important;
+  background: transparent !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+.box-corner-left { left: -2px; bottom: -2px; } /* 贴边框边缘，无缝隙 */
+.box-corner-right { right: -2px; bottom: -2px; }
+
+.box-picker-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 12px; /* 模式按钮与底部保持边距 */
+}
+.box-picker-hexrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.box-picker-hexwrap {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.box-picker-hexwrap label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text-faint, #999);
+}
+
+.box-picker-swatch {
+  width: 64px;
+  height: 64px;
+  border: none;
+  flex-shrink: 0;
+}
+
+.box-picker-hex {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12px;
+  background: var(--background-secondary, rgba(0,0,0,0.04));
+  border: 1px solid var(--background-modifier-border, #d0d7de);
+  border-radius: 6px;
+  color: var(--text-normal, #333);
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 4px;
+  width: 100%;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.box-picker-hex:focus {
+  border-color: #007AFF;
+  box-shadow: 0 0 0 3px rgba(0,122,255,0.22);
+}
+
+.box-picker-channels {
+  display: flex;
+  flex: 2;
+  min-width: 0;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted, #666);
+}
+
+.box-picker-channel {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.box-picker-channel label {
+  font-size: 10px;
+  text-transform: uppercase;
+  color: var(--text-faint, #999);
+}
+
+.box-picker-channel input {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 12px;
+  background: var(--background-secondary, rgba(0,0,0,0.04));
+  border: 1px solid var(--background-modifier-border, #d0d7de);
+  border-radius: 6px;
+  color: var(--text-normal, #333);
+  height: 30px;
+  box-sizing: border-box;
+  padding: 0 4px;
+  width: 100%;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.box-picker-channel input:focus {
+  border-color: #007AFF;
+  box-shadow: 0 0 0 3px rgba(0,122,255,0.22);
+}
+
+
+
+.box-picker-mode-toggle {
+  display: flex;
+  width: fit-content;
+  margin: 0 auto;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border, #d0d7de);
+  background: var(--background-secondary, rgba(0,0,0,0.04));
+}
+
+.box-picker-mode-toggle button {
+  flex: none;
+  width: 64px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #666);
+  padding: 0;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.box-picker-mode-toggle button.active {
+  background: #007AFF;
+  color: #fff;
+}
+
+.box-picker-mode-toggle button:not(:last-child) {
+  border-right: 1px solid rgba(255,255,255,0.1);
+}
+
+
+/* ==== Obsidian 主题适配（覆盖深色默认；用 Obsidian 变量，自适应浅/深主题） ==== */
+.box-picker { color: var(--text-normal, #1a1a1a); }
+.box-picker-swatch { border-color: var(--background-modifier-border, #d0d7de); }
+.box-picker-hex {
+  background: var(--background-primary, #fff);
+  border-color: var(--background-modifier-border, #d0d7de);
+  color: var(--text-normal, #1a1a1a);
+}
+.box-picker-hex:focus { border-color: var(--interactive-accent, #2b6de8); }
+.box-picker-channels { color: var(--text-muted, #666); }
+.box-picker-channel label { color: var(--text-faint, #999); }
+.box-picker-channel input {
+  background: var(--background-primary, #fff);
+  border-color: var(--background-modifier-border, #d0d7de);
+  color: var(--text-normal, #1a1a1a);
+}
+.box-picker-channel input:focus { border-color: var(--interactive-accent, #2b6de8); }
+/* copy removed */
+  background: var(--background-secondary, #f2f3f5);
+  border-color: var(--background-modifier-border, #d0d7de);
+  color: var(--text-muted, #666);
+}
+/* copy hover removed */ { background: var(--background-modifier-hover, #e8e8e8); color: var(--text-normal, #1a1a1a); }
+.box-picker-mode-toggle { border-color: var(--background-modifier-border, #d0d7de); }
+.box-picker-mode-toggle button { background: var(--background-secondary, #f2f3f5); color: var(--text-muted, #666); }
+.box-picker-mode-toggle button:hover { color: var(--text-normal, #1a1a1a); }
+.box-picker-mode-toggle button.active { background: var(--interactive-accent, #2b6de8); color: #fff; }
+.box-picker-mode-toggle button:not(:last-child) { border-right-color: var(--background-modifier-border, #d0d7de); }
+
+/* 通道数值强制可读（!important 防 Obsidian 全局 input 样式干扰） */
+.box-picker-channel input {
+  color: var(--text-normal, #1a1a1a) !important;
+  background: var(--background-primary, #fff) !important;
+  border-color: var(--background-modifier-border, #d0d7de) !important;
+  font-size: 13px !important;
+  opacity: 1 !important;
+}
+.box-picker-channel label { color: var(--text-muted, #666) !important; }
+.box-picker-hexwrap label { color: var(--text-muted, #666) !important; }
