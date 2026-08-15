@@ -32,6 +32,9 @@ export function createInteraction(
 
   function canvasPoint(e: MouseEvent | Touch): Vec2 {
 
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
   // ── Alpha ring state machine ──────────────────────────────────────────
   let alphaDragging = false;
   const DOT_HIT_R = 9;
@@ -52,9 +55,6 @@ export function createInteraction(
   function inAlphaRing(pt: Vec2): boolean {
     const d = distToDot(pt);
     return d >= ALPHA_R_IN - 4 && d <= ALPHA_R_OUT + 6;
-  }
-    const rect = canvas.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
 
   // ── Hit testing ───────────────────────────────────────────────────────

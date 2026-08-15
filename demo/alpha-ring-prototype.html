@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>环形 Alpha 选择器 — 交互原型</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f3f4f6; margin: 0; padding: 40px 24px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+  h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #374151; }
+  .sub { margin: 0; font-size: 13px; color: #6b7280; max-width: 640px; text-align: center; line-height: 1.7; }
+  .row { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px 20px; box-shadow: 0 6px 20px rgba(0,0,0,.07); }
+  h3 { margin: 0 0 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; }
+  pre { font: 13px/1.8 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #111827; margin: 0; }
+  .hint { font-size: 12px; color: #9ca3af; line-height: 1.7; }
+  code { background: #f0f0f2; border-radius: 4px; padding: 1px 5px; font-size: 12px; }
+  .swatch { width: 100%; height: 34px; border-radius: 8px; border: 1px solid rgba(0,0,0,.12); margin-top: 10px; }
+  .linear-wrap { position: relative; width: 280px; height: 26px; border-radius: 7px; overflow: hidden; border: 1px solid rgba(0,0,0,.12); margin-top: 14px; }
+  .linear-wrap canvas { display: block; width: 100%; height: 100%; }
+  canvas#cv { display: block; border-radius: 12px; background: #fafafa; border: 1px solid #e5e7eb; touch-action: none; cursor: crosshair; }
+  kbd { background: #f0f0f2; border: 1px solid #d4d4d8; border-radius: 4px; padding: 0 5px; font-size: 11px; }
+</style>
+</head>
+<body>
+  <h1>Ring Alpha Picker · Prototype</h1>
+  <p class="sub">按压指示器圆点 → 弹出环形 alpha 环；在环上拖动或点按选择透明度（12 点 = 0%，顺时针增大，转满一圈 = 100%）；再次按压圆点、点环外或按 <kbd>Esc</kbd> 关闭。下方是 vanilla-colorful 线性 alpha 条对照。</p>
+  <div class="row">
+    <div class="panel">
+      <canvas id="cv" width="320" height="320"></canvas>
+    </div>
+    <div class="panel">
+      <h3>Alpha 实时值</h3>
+      <pre id="out"></pre>
+      <div class="swatch" id="sw"></div>
+      <p class="hint">交互状态：<span id="mode">idle</span><br>当前颜色固定为 #3B82F6 以聚焦 alpha 交互</p>
+      <h3 style="margin-top:18px">对照 · vanilla-colorful 线性条</h3>
+      <div class="linear-wrap"><canvas id="lbar"></canvas></div>
+      <p class="hint">环形方案 = 把这条线性渐变卷成围绕指示器的圆环，可一步完成选色 + 调透明度。</p>
+    </div>
+  </div>
+  <script>
+  (() => {
+    const cv = document.getElementById('cv');
+    const ctx = cv.getContext('2d');
+    const out = document.getElementById('out');
+    const modeEl = document.getElementById('mode');
+    const sw = document.getElementById('sw');
+    const SIZE = 320;
+
+    const state = {
+      dot: { x: 160, y: 160 },
+      alpha: 0.65,
+      mode: 'idle', // 'idle' | 'alpha'
+      color: { r: 59, g: 130, b: 246 },
+    };
+    const R_OUT = 30, R_IN = 13;
+    const RING_MID = (R_OUT + R_IN) / 2;
+    const DRAG_THRESHOLD = 4;
+
+    function pos(e) {
+      const r = cv.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+    function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+    function hitDot(p) { return dist(p, state.dot) <= 9; }
+    function hitRing(p) { const d = dist(p, state.dot); return d >= R_IN - 4 && d <= R_OUT + 6; }
+    // 12 点方向 = 0，顺时针增大，返回 0..2π
+    function angleOf(p) {
+      const dx = p.x - state.dot.x, dy = p.y - state.dot.y;
+      return (Math.atan2(dx, -dy) + Math.PI * 2) % (Math.PI * 2);
+    }
+    function alphaFromAngle(a) { return a / (Math.PI * 2); }
+    function angleFromAlpha(a) { return a * Math.PI * 2; }
+    function ringPoint(a, r) {
+      return { x: state.dot.x + r * Math.sin(a), y: state.dot.y - r * Math.cos(a) };
+    }
+
+    function checkerboard() {
+      const cell = 5;
+      for (let i = 0; i * cell < SIZE; i++) {
+        for (let j = 0; j * cell < SIZE; j++) {
+          ctx.fillStyle = (i + j) % 2 === 0 ? '#ffffff' : '#d9d9d9';
+          ctx.fillRect(i * cell, j * cell, cell, cell);
+        }
+      }
+    }
+    function ringClip() {
+      ctx.beginPath();
+      ctx.arc(state.dot.x, state.dot.y, R_OUT, 0, Math.PI * 2);
+      ctx.arc(state.dot.x, state.dot.y, R_IN, 0, Math.PI * 2, true);
+      ctx.clip();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, SIZE, SIZE);
+      ctx.fillStyle = '#fafafa';
+      ctx.fillRect(0, 0, SIZE, SIZE);
+
+      // 环
+      if (state.mode === 'alpha') {
+        ctx.save();
+        ringClip();
+        checkerboard();
+        const grad = ctx.createConicGradient(-Math.PI / 2, state.dot.x, state.dot.y);
+        const c = state.color;
+        grad.addColorStop(0, 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',0)');
+        grad.addColorStop(1, 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',1)');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, SIZE, SIZE);
+        ctx.restore();
+        // 环描边
+        ctx.beginPath();
+        ctx.arc(state.dot.x, state.dot.y, R_OUT, 0, Math.PI * 2);
+        ctx.arc(state.dot.x, state.dot.y, R_IN, 0, Math.PI * 2, true);
+        ctx.strokeStyle = 'rgba(0,0,0,.18)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        // 12 点刻度
+        const t0 = ringPoint(0, R_OUT + 4);
+        ctx.beginPath();
+        ctx.arc(t0.x, t0.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(0,0,0,.25)';
+        ctx.fill();
+        // alpha 指示器
+        const ip = ringPoint(angleFromAlpha(state.alpha), RING_MID);
+        ctx.beginPath();
+        ctx.arc(ip.x, ip.y, 5.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.45)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // 指示器圆点（白环 + 当前色内芯，内芯叠加 alpha）
+      const c = state.color;
+      ctx.beginPath();
+      ctx.arc(state.dot.x, state.dot.y, 8, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.18)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(state.dot.x, state.dot.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + state.alpha + ')';
+      ctx.fill();
+
+      renderOut();
+    }
+
+    function renderOut() {
+      const pct = Math.round(state.alpha * 100);
+      out.textContent = 'alpha:  ' + pct + '%\nangle:  ' + Math.round(angleFromAlpha(state.alpha) * 180 / Math.PI) + ' deg\nrgba:   rgba(59, 130, 246, ' + state.alpha.toFixed(3) + ')';
+      modeEl.textContent = state.mode;
+      sw.style.background = 'rgba(59, 130, 246, ' + state.alpha + ')';
+      drawLinear();
+    }
+
+    // 对照：vanilla-colorful 线性 alpha 条
+    const lbar = document.getElementById('lbar');
+    const lctx = lbar.getContext('2d');
+    function drawLinear() {
+      const W = 280, H = 26;
+      lbar.width = W; lbar.height = H;
+      for (let i = 0; i < W; i += 5) for (let j = 0; j < H; j += 5) {
+        lctx.fillStyle = (i / 5 + j / 5) % 2 === 0 ? '#ffffff' : '#d9d9d9';
+        lctx.fillRect(i, j, 5, 5);
+      }
+      const g = lctx.createLinearGradient(0, 0, W, 0);
+      g.addColorStop(0, 'rgba(59,130,246,0)');
+      g.addColorStop(1, 'rgba(59,130,246,1)');
+      lctx.fillStyle = g;
+      lctx.fillRect(0, 0, W, H);
+      const ix = state.alpha * W;
+      lctx.beginPath();
+      lctx.arc(ix, H / 2, 6, 0, Math.PI * 2);
+      lctx.fillStyle = '#fff';
+      lctx.fill();
+      lctx.strokeStyle = 'rgba(0,0,0,.45)';
+      lctx.lineWidth = 1;
+      lctx.stroke();
+    }
+
+    // ── 交互状态机 ──
+    let pointerDown = false;
+    let downPos = null;
+
+    cv.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const p = pos(e);
+      if (state.mode === 'alpha') {
+        if (hitDot(p)) { state.mode = 'idle'; draw(); return; }
+        if (hitRing(p)) {
+          pointerDown = true;
+          downPos = p;
+          state.alpha = alphaFromAngle(angleOf(p));
+          draw();
+          return;
+        }
+        state.mode = 'idle';
+        draw();
+        return;
+      }
+      if (hitDot(p)) {
+        state.mode = 'alpha';
+        pointerDown = true;
+        downPos = p;
+        draw();
+      }
+    });
+
+    cv.addEventListener('pointermove', (e) => {
+      const p = pos(e);
+      if (!pointerDown) return;
+      if (state.mode === 'alpha' && downPos && dist(p, downPos) > DRAG_THRESHOLD) {
+        state.alpha = alphaFromAngle(angleOf(p));
+        draw();
+      }
+    });
+
+    const endDrag = () => { pointerDown = false; downPos = null; };
+    cv.addEventListener('pointerup', endDrag);
+    cv.addEventListener('pointercancel', endDrag);
+    cv.addEventListener('pointerleave', endDrag);
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && state.mode === 'alpha') { state.mode = 'idle'; draw(); }
+      if (state.mode !== 'alpha') return;
+      if (e.key === 'ArrowUp' || e.key === 'ArrowRight') { state.alpha = Math.min(1, state.alpha + 0.02); draw(); }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') { state.alpha = Math.max(0, state.alpha - 0.02); draw(); }
+    });
+
+    draw();
+  })();
+  </script>
+</body>
+</html>
