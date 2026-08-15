@@ -55,7 +55,7 @@ class ColorIsBoxModelElement extends HTMLElement {
     if (mode) this.picker.setMode(mode);
 
     // alpha 模型：自动附加透明度滑杆（vanilla-colorful 同款交互）
-    const ALPHA_MODELS = new Set(['hex-alpha', 'rgba', 'hsla', 'hsva', 'rgba-string', 'hsla-string', 'hsva-string']);
+    const ALPHA_MODELS = new Set(['hex-alpha', 'rgba', 'hsla', 'hsva', 'oklcha', 'rgba-string', 'hsla-string', 'hsva-string']);
     if (ALPHA_MODELS.has(this.model)) {
       const bar = document.createElement('input');
       bar.type = 'range';
@@ -119,6 +119,7 @@ const MODELS: Array<[string, ColorModel]> = [
   ['hsv-color-picker', 'hsv'],
   ['hsv-string-color-picker', 'hsv-string'],
   ['oklch-color-picker', 'oklch'],
+  ['oklcha-color-picker', 'oklcha'],
   ['hsva-color-picker', 'hsva'],
   ['hsva-string-color-picker', 'hsva-string'],
   // ambient-ui prefixed extras
@@ -126,6 +127,7 @@ const MODELS: Array<[string, ColorModel]> = [
   ['color-is-box-hsl', 'hsl'],
   ['color-is-box-hsv', 'hsv'],
   ['color-is-box-oklch', 'oklch'],
+  ['color-is-box-oklcha', 'oklcha'],
   ['color-is-box-hex-alpha', 'hex-alpha'],
   ['color-is-box-rgba', 'rgba'],
   ['color-is-box-hsla', 'hsla'],

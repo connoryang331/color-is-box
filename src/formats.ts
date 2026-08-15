@@ -1,7 +1,7 @@
 // @ambient-ui/color-is-box — color model parse/format adapters (vanilla-colorful style)
 import { rgbToHsb, hsbToRgb, rgbToOklch, oklchToRgb, rgbToHex, hexToRgb } from './color-math';
 
-export type ColorModel = 'hex' | 'rgb' | 'hsl' | 'hsv' | 'oklch' | 'hex-alpha' | 'rgba' | 'hsla' | 'hsva' | 'rgb-string' | 'rgba-string' | 'hsl-string' | 'hsla-string' | 'hsv-string' | 'hsva-string';
+export type ColorModel = 'hex' | 'rgb' | 'hsl' | 'hsv' | 'oklch' | 'oklcha' | 'hex-alpha' | 'rgba' | 'hsla' | 'hsva' | 'rgb-string' | 'rgba-string' | 'hsl-string' | 'hsla-string' | 'hsv-string' | 'hsva-string';
 export type RGB = { r: number; g: number; b: number };
 
 export interface ModelValue { rgb: RGB; alpha: number; }
@@ -33,9 +33,9 @@ export function parseModelValue(v: string, model: ColorModel): ModelValue | null
       if (m) return hsbToRgb({ h: +m[1], s: +m[2], b: +m[3] });
       return null;
     }
-    if (model === 'oklch') {
-      const m = s.match(/([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/);
-      if (m) return oklchToRgb({ l: +m[1], c: +m[2], h: +m[3] });
+    if (model === 'oklch' || model === 'oklcha') {
+      const m = s.match(/([\\d.]+)[,\\s]+([\\d.]+)[,\\s]+([\\d.]+)(?:[,\\s]+([\\d.]+))?/);
+      if (m) return { rgb: oklchToRgb({ l: +m[1], c: +m[2], h: +m[3] }), alpha: m[4] !== undefined ? Math.min(1, +m[4]) : 1 };
       return null;
     }
   } catch { /* ignore */ }
