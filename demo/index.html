@@ -187,19 +187,33 @@
         </div>
       </div>
 
-      <!-- 3D Zoom & Size Controls -->
+      <!-- 3D Box Dimensions (长方体三轴独立拉伸) -->
       <div class="row" style="margin-top: 4px; padding-top: 6px; border-top: 1px dashed #e5e7eb;">
         <span class="label" style="color: #6366f1;">ZOOM</span>
         <div class="blender-slider" id="slider-zoom">
-          <div class="bar" style="background: #6366f1;"></div>
+          <div class="bar" style="background: #6366f1; opacity: 0.22;"></div>
           <input type="text" id="v-zoom" value="1.00x">
         </div>
       </div>
       <div class="row">
-        <span class="label" style="color: #8b5cf6;">SCALE</span>
-        <div class="blender-slider" id="slider-scale">
-          <div class="bar" style="background: #8b5cf6;"></div>
-          <input type="text" id="v-scale" value="1.00">
+        <span class="label" style="color: #ef4444;">SIZE X</span>
+        <div class="blender-slider rot-x" id="slider-size-x">
+          <div class="bar"></div>
+          <input type="text" id="v-size-x" value="1.00">
+        </div>
+      </div>
+      <div class="row">
+        <span class="label" style="color: #22c55e;">SIZE Y</span>
+        <div class="blender-slider rot-y" id="slider-size-y">
+          <div class="bar"></div>
+          <input type="text" id="v-size-y" value="1.00">
+        </div>
+      </div>
+      <div class="row">
+        <span class="label" style="color: #3b82f6;">SIZE Z</span>
+        <div class="blender-slider rot-z" id="slider-size-z">
+          <div class="bar"></div>
+          <input type="text" id="v-size-z" value="1.00">
         </div>
       </div>
 
@@ -559,7 +573,28 @@
     };
 
     const sZoom = makeGenericSlider('slider-zoom', 'v-zoom', () => picker.getZoom ? picker.getZoom() : 1.0, (v) => { if (picker.setZoom) picker.setZoom(v); }, 0.2, 2.5, 'x', 2);
-    const sScale = makeGenericSlider('slider-scale', 'v-scale', () => picker.getDimensions ? picker.getDimensions().sizeX : 1.0, (v) => { if (picker.setDimensions) picker.setDimensions(v, v, v); }, 0.2, 2.0, '', 2);
+    
+    // 3轴独立拉伸尺寸 (支持任意拉伸成长方体)
+    const sSizeX = makeGenericSlider('slider-size-x', 'v-size-x', () => picker.getDimensions ? picker.getDimensions().sizeX : 1.0, (v) => {
+      if (picker.setDimensions && picker.getDimensions) {
+        const d = picker.getDimensions();
+        picker.setDimensions(v, d.sizeY, d.sizeZ);
+      }
+    }, 0.2, 2.5, '', 2);
+
+    const sSizeY = makeGenericSlider('slider-size-y', 'v-size-y', () => picker.getDimensions ? picker.getDimensions().sizeY : 1.0, (v) => {
+      if (picker.setDimensions && picker.getDimensions) {
+        const d = picker.getDimensions();
+        picker.setDimensions(d.sizeX, v, d.sizeZ);
+      }
+    }, 0.2, 2.5, '', 2);
+
+    const sSizeZ = makeGenericSlider('slider-size-z', 'v-size-z', () => picker.getDimensions ? picker.getDimensions().sizeZ : 1.0, (v) => {
+      if (picker.setDimensions && picker.getDimensions) {
+        const d = picker.getDimensions();
+        picker.setDimensions(d.sizeX, d.sizeY, v);
+      }
+    }, 0.2, 2.5, '', 2);
 
     const sX = initBlenderSlider('slider-rot-x', 'v-rot-x', 'x', -180, 180);
     const sY = initBlenderSlider('slider-rot-y', 'v-rot-y', 'y', -180, 180);
@@ -570,7 +605,9 @@
       sY.update();
       sZ.update();
       sZoom.update();
-      sScale.update();
+      sSizeX.update();
+      sSizeY.update();
+      sSizeZ.update();
       sEfW.update();
       sEbW.update();
       requestAnimationFrame(updateLoop);
