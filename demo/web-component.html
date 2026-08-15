@@ -55,7 +55,8 @@
     };
     picker.addEventListener('change', (e) => show(e.detail));
     document.getElementById('setbtn').addEventListener('click', () => { picker.value = '#008fa0'; });
-    setTimeout(() => show({ hex: picker.value, rgb: {}, hsb: {}, oklch: {} }), 300);
+    setTimeout(() => { out.textContent = 'attribute value: ' + picker.value + '
+(initial — wait for change events)'; }, 300);
   </script>
 </body>
 </html>
