@@ -20,6 +20,27 @@ tiny, framework-agnostic, works everywhere.
 - 📲 **Mobile-friendly** — touch-action support for touch screens
 - 👫 **Framework-agnostic** — React / Vue / Svelte / vanilla
 - 💨 **Zero dependencies, zero build needed** (IIFE) — also ESM + source
+## Supported color models
+
+| Element | Value format | Example |
+| --- | --- | --- |
+| `<hex-color-picker>` | HEX | `#ffffff` |
+| `<hex-alpha-color-picker>` | HEX + alpha | `#ffffff88` |
+| `<rgb-color-picker>` | RGB | `255, 255, 255` |
+| `<rgb-string-color-picker>` | CSS string | `rgb(255, 255, 255)` |
+| `<rgba-color-picker>` | RGBA | `255, 255, 255, 1` |
+| `<rgba-string-color-picker>` | CSS string | `rgba(255, 255, 255, 1)` |
+| `<hsl-color-picker>` | HSL | `0, 0%, 100%` |
+| `<hsl-string-color-picker>` | CSS string | `hsl(0, 0%, 100%)` |
+| `<hsla-color-picker>` | HSLA | `0, 0%, 100%, 1` |
+| `<hsla-string-color-picker>` | CSS string | `hsla(0, 0%, 100%, 1)` |
+| `<hsv-color-picker>` | HSV | `0, 0%, 100%` |
+| `<hsv-string-color-picker>` | CSS string | `hsv(0, 0%, 100%)` |
+| `<hsva-color-picker>` | HSVA | `0, 0%, 100%, 1` |
+| `<hsva-string-color-picker>` | CSS string | `hsva(0, 0%, 100%, 1)` |
+
+Also registered: `<color-is-box>` (hex) and `<color-is-box-rgb/hsl/hsv/oklch/hex-alpha/rgba/hsla/hsva>`.
+Alpha models (rgba/hsla/hsva/hex-alpha + string variants) automatically show an alpha slider.
 ## Usage — Web Component
 
 ```html
