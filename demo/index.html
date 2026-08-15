@@ -325,6 +325,77 @@
       document.getElementById('e-col').value = '#ffffff';
     });
 
+    // ── Generic Blender Slider Component ──
+    const makeGenericSlider = (sliderId, inputId, getFn, setFn, minVal, maxVal, unit = '', stepPrecision = 2) => {
+      const slider = document.getElementById(sliderId);
+      const input = document.getElementById(inputId);
+      const bar = slider.querySelector('.bar');
+      let isDragging = false;
+      let startX = 0;
+      let startVal = 0;
+      let isTyping = false;
+
+      const updateBar = (val) => {
+        const norm = Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal)));
+        bar.style.width = (norm * 100) + '%';
+      };
+
+      slider.addEventListener('mousedown', (e) => {
+        if (isTyping) return;
+        isDragging = true;
+        startX = e.clientX;
+        startVal = getFn();
+        document.body.style.cursor = 'ew-resize';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        if (Math.abs(dx) > 1) {
+          const speed = e.shiftKey ? 0.002 : 0.01;
+          const newVal = Math.max(minVal, Math.min(maxVal, parseFloat((startVal + dx * speed).toFixed(stepPrecision))));
+          setFn(newVal);
+          input.value = newVal.toFixed(stepPrecision) + unit;
+          updateBar(newVal);
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          document.body.style.cursor = 'default';
+        }
+      });
+
+      input.addEventListener('focus', () => {
+        isTyping = true;
+        input.value = getFn().toFixed(stepPrecision);
+        input.select();
+      });
+
+      input.addEventListener('blur', () => {
+        isTyping = false;
+        const v = Math.max(minVal, Math.min(maxVal, parseFloat(input.value) || minVal));
+        setFn(v);
+        input.value = v.toFixed(stepPrecision) + unit;
+        updateBar(v);
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') input.blur();
+      });
+
+      return {
+        update: () => {
+          if (!isTyping && !isDragging) {
+            const v = getFn();
+            input.value = v.toFixed(stepPrecision) + unit;
+            updateBar(v);
+          }
+        }
+      };
+    };
+
     // ── 12 Cube Edges Controls Logic ──
     const eVis = document.getElementById('e-vis');
     const eHid = document.getElementById('e-hid');
@@ -443,77 +514,6 @@
           if (!isTyping && !isDragging) {
             const v = getVal();
             input.value = v.toFixed(1) + '°';
-            updateBar(v);
-          }
-        }
-      };
-    };
-
-    // ── Generic Blender Slider Component ──
-    const makeGenericSlider = (sliderId, inputId, getFn, setFn, minVal, maxVal, unit = '', stepPrecision = 2) => {
-      const slider = document.getElementById(sliderId);
-      const input = document.getElementById(inputId);
-      const bar = slider.querySelector('.bar');
-      let isDragging = false;
-      let startX = 0;
-      let startVal = 0;
-      let isTyping = false;
-
-      const updateBar = (val) => {
-        const norm = Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal)));
-        bar.style.width = (norm * 100) + '%';
-      };
-
-      slider.addEventListener('mousedown', (e) => {
-        if (isTyping) return;
-        isDragging = true;
-        startX = e.clientX;
-        startVal = getFn();
-        document.body.style.cursor = 'ew-resize';
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        const dx = e.clientX - startX;
-        if (Math.abs(dx) > 1) {
-          const speed = e.shiftKey ? 0.002 : 0.01;
-          const newVal = Math.max(minVal, Math.min(maxVal, parseFloat((startVal + dx * speed).toFixed(stepPrecision))));
-          setFn(newVal);
-          input.value = newVal.toFixed(stepPrecision) + unit;
-          updateBar(newVal);
-        }
-      });
-
-      window.addEventListener('mouseup', () => {
-        if (isDragging) {
-          isDragging = false;
-          document.body.style.cursor = 'default';
-        }
-      });
-
-      input.addEventListener('focus', () => {
-        isTyping = true;
-        input.value = getFn().toFixed(stepPrecision);
-        input.select();
-      });
-
-      input.addEventListener('blur', () => {
-        isTyping = false;
-        const v = Math.max(minVal, Math.min(maxVal, parseFloat(input.value) || minVal));
-        setFn(v);
-        input.value = v.toFixed(stepPrecision) + unit;
-        updateBar(v);
-      });
-
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') input.blur();
-      });
-
-      return {
-        update: () => {
-          if (!isTyping && !isDragging) {
-            const v = getFn();
-            input.value = v.toFixed(stepPrecision) + unit;
             updateBar(v);
           }
         }
