@@ -153,11 +153,6 @@ export function render(
   ctx.restore();
   if (showLabels) drawAxisLabels(ctx, mode, scale, center);
   // 视角旋转时：灰轴接近正对则画饱和度雷达网格；旋转中浮现环形饱和度盘
-  const { yaw: vYaw, pitch: vPitch } = getViewRotation();
-  const viewProximity = Math.max(0, Math.min(1, 1 - Math.max(Math.abs(vYaw), Math.abs(vPitch)) / 10));
-  // 网格仅在视角回正且未旋转时显示，且减淡（避免与立方体/饱和度环重叠）
-  if (viewProximity > 0.02 && !rs.viewRotating) drawRadarGrid(ctx, scale, center, viewProximity * 0.45);
-  if (satRing && satRing.active && rs.ringAlpha > 0.01) drawSatRing(ctx, center, satRing.rgb, satRing.sat, rs.ringAlpha);
   // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
 
   // Draw the color dot on the face
@@ -415,63 +410,6 @@ function drawAxisHandles(ctx: CanvasRenderingContext2D, verts2d: Vec2[], rs: Ren
 
 const SAT_RING_RATIO_OUT = 0.48; // 环外半径 = scale × 比例
 const SAT_RING_RATIO_IN = 0.33;
-
-function drawRadarGrid(ctx: CanvasRenderingContext2D, scale: number, center: Vec2, alpha: number): void {
-  const HEX: Vec3[] = [
-    { x: 1, y: 0, z: 0 }, { x: 1, y: 1, z: 0 }, { x: 0, y: 1, z: 0 },
-    { x: 0, y: 1, z: 1 }, { x: 0, y: 0, z: 1 }, { x: 1, y: 0, z: 1 },
-  ];
-  const NAMES = ['R', 'Y', 'G', 'C', 'B', 'M'];
-  const COLS = ['#ff1744', '#ffeb3b', '#00e676', '#00bcd4', '#2962ff', '#f50057'];
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  // 同心六边形（25/50/75/100%）
-  for (const t of [0.25, 0.5, 0.75, 1]) {
-    ctx.setLineDash(t === 1 ? [] : [3, 5]);
-    ctx.strokeStyle = t === 1 ? 'rgba(30,41,59,.5)' : 'rgba(148,163,184,.55)';
-    ctx.lineWidth = t === 1 ? 1.4 : 1;
-    ctx.beginPath();
-    for (let i = 0; i <= 6; i++) {
-      const hx = HEX[i % 6];
-      const pp = project({ x: hx.x * t, y: hx.y * t, z: hx.z * t }, scale, center);
-      if (i === 0) ctx.moveTo(pp.x, pp.y); else ctx.lineTo(pp.x, pp.y);
-    }
-    ctx.closePath();
-    ctx.stroke();
-  }
-  // 径向轴线
-  ctx.setLineDash([]);
-  ctx.strokeStyle = 'rgba(148,163,184,.4)';
-  ctx.lineWidth = 1;
-  for (const hx of HEX) {
-    const pp = project(hx, scale, center);
-    ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(pp.x, pp.y); ctx.stroke();
-  }
-  // 刻度
-  ctx.font = '10px monospace';
-  ctx.fillStyle = '#64748b';
-  ctx.textAlign = 'left';
-  for (const t of [0.25, 0.5, 0.75]) {
-    const pp = project({ x: t, y: t, z: 0 }, scale, center);
-    ctx.fillText(Math.round(t * 100) + '%', pp.x + 5, pp.y - 4);
-  }
-  // 顶点标签
-  ctx.font = 'bold 11px sans-serif';
-  ctx.fillStyle = '#334155';
-  ctx.textAlign = 'center';
-  for (let i = 0; i < 6; i++) {
-    const p = project(HEX[i], scale, center);
-    const dx = p.x > center.x + 10 ? 14 : p.x < center.x - 10 ? -14 : 0;
-    const dy = p.y < center.y - 10 ? -10 : 14;
-    ctx.fillText(NAMES[i], p.x + dx, p.y + dy);
-  }
-  // 中心点
-  ctx.beginPath();
-  ctx.arc(center.x, center.y, 3.5, 0, Math.PI * 2);
-  ctx.fillStyle = '#111';
-  ctx.fill();
-  ctx.restore();
-}
 
 function drawSatRing(ctx: CanvasRenderingContext2D, scale: number, center: Vec2, rgb: { r: number; g: number; b: number }, sat: number, alpha: number): void {
   const R_OUT = scale * SAT_RING_RATIO_OUT;
