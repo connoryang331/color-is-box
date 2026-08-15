@@ -40,7 +40,7 @@ tiny, framework-agnostic, works everywhere.
 | `<hsva-string-color-is-box>` | CSS string | `hsva(0, 0%, 100%, 1)` |
 
 All `<model>-color-is-box` tags are registered: `<hex-color-is-box>`, `<rgb-color-is-box>`, `<hsl-color-is-box>`, `<oklch-color-is-box>`, plus alpha/string variants (`<rgba-color-is-box>`, `<hsla-color-is-box>`, `<oklcha-color-is-box>`, `<rgb-string-color-is-box>`, ...).
-Alpha models (rgba/hsla/hsva/hex-alpha + string variants) automatically show an alpha slider.
+Alpha models (rgba/hsla/hsva/oklcha/hex-alpha + string variants) enable the **ring alpha picker**: press the indicator dot to open a circular alpha ring around it (12 o'clock = 0%, clockwise to 100%); press the dot again, tap outside, or press Esc to close. Arrow keys nudge ±2% while open.
 ## Usage — Web Component
 
 ```html
