@@ -20,24 +20,25 @@
   /* Left aligned values - strictly vertically aligned */
   .row .val { font: 12.5px/1.5 ui-monospace, "SF Mono", "Cascadia Code", monospace; color: #111827; letter-spacing: .01em; text-align: left; margin-left: 0; flex: 1; }
 
-  /* Blender-style numeric slider (Blender 3D exact UI theme) */
+  /* Blender-style numeric slider (Light Clean White Theme) */
   .blender-slider {
     position: relative;
     display: flex;
     align-items: center;
     width: 155px;
     height: 26px;
-    background: #393939;
-    border: 1px solid #222222;
-    border-radius: 4px;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
     overflow: hidden;
     cursor: ew-resize;
     user-select: none;
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: border-color 0.15s;
   }
   .blender-slider:hover {
-    background: #474747;
-    border-color: #111111;
+    border-color: #9ca3af;
+    background: #fafafa;
   }
   .blender-slider .bar {
     position: absolute;
@@ -45,13 +46,13 @@
     top: 0;
     bottom: 0;
     width: 50%;
-    opacity: 0.45;
+    opacity: 0.18;
     pointer-events: none;
     transition: width 0.04s linear;
   }
-  .blender-slider.rot-x .bar { background: #e03131; }
-  .blender-slider.rot-y .bar { background: #2f9e44; }
-  .blender-slider.rot-z .bar { background: #1971c2; }
+  .blender-slider.rot-x .bar { background: #ef4444; opacity: 0.22; }
+  .blender-slider.rot-y .bar { background: #22c55e; opacity: 0.22; }
+  .blender-slider.rot-z .bar { background: #3b82f6; opacity: 0.22; }
   .blender-slider input {
     position: relative;
     width: 100%;
@@ -62,19 +63,18 @@
     text-align: center;
     font: 12px/26px ui-monospace, "SF Mono", monospace;
     font-weight: 600;
-    color: #f1f3f5;
+    color: #1f2937;
     cursor: ew-resize;
     padding: 0 4px;
     box-sizing: border-box;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
     pointer-events: none; /* 让拖拽事件直接穿透至滑块容器，保证拖拽 100% 触发 */
   }
   .blender-slider.typing input,
   .blender-slider input:focus {
-    background: #1e1e1e;
-    color: #ffffff;
+    background: #ffffff;
+    color: #111827;
     cursor: text;
-    border: 1px solid #4dabf7;
+    border: 1px solid #3b82f6;
     pointer-events: auto;
   }
 
