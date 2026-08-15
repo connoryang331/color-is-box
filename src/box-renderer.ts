@@ -318,13 +318,6 @@ function drawAxisLabels(ctx: CanvasRenderingContext2D, mode: ColorMode, scale: n
   const offsets: Vec2[] = invertMode
     ? [{ x: 14, y: 6 }, { x: -14, y: 6 }, { x: 0, y: -10 }]
     : [{ x: -16, y: -6 }, { x: 16, y: -6 }, { x: 0, y: 12 }];
-  // 顶点实际颜色：各轴端点在其渐变面上的渲染色（RGB:红绿蓝 / HSB:黑黑白 / LCH:白黑黑）
-  const VERTEX_PTS: Vec3[] = [
-    { x: 1, y: 0, z: 0 },
-    { x: 0, y: 1, z: 0 },
-    { x: 0, y: 0, z: 1 },
-  ];
-  const labelColors = VERTEX_PTS.map((pt) => rgbToHex(valuesToRgb(pt, mode)));
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   // 文字阴影（柔和投影）
@@ -333,16 +326,13 @@ function drawAxisLabels(ctx: CanvasRenderingContext2D, mode: ColorMode, scale: n
   ctx.shadowBlur = 3;
   ctx.shadowOffsetX = 1;
   ctx.shadowOffsetY = 1;
-  // 全部字母不描边，只保留柔和投影；部分字母改灰保证可读
-  const grayIdx: Record<ColorMode, number[]> = { rgb: [], hsb: [2], oklch: [0] }; // 仅 L 灰；C 用顶点色
-  // 顶点字母：静态绘制（无呼吸动画），固定透明度与字号
+  // 顶点字母：统一灰色加粗，固定绘制（不跟随顶点颜色）
   for (let i = 0; i < 3; i++) {
     const tx = positions[i].x + offsets[i].x;
     const ty = positions[i].y + offsets[i].y;
-    ctx.globalAlpha = 0.8;
+    ctx.globalAlpha = 0.9;
     ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    const hexC = isGray ? '#888888' : labelColors[i];
-    ctx.fillStyle = hexC;
+    ctx.fillStyle = '#888888';
     ctx.fillText(labels[i], tx, ty);
   }
   ctx.globalAlpha = 1;
