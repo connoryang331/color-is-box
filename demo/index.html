@@ -67,12 +67,15 @@
     padding: 0 4px;
     box-sizing: border-box;
     text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    pointer-events: none; /* 让拖拽事件直接穿透至滑块容器，保证拖拽 100% 触发 */
   }
+  .blender-slider.typing input,
   .blender-slider input:focus {
     background: #1e1e1e;
     color: #ffffff;
     cursor: text;
     border: 1px solid #4dabf7;
+    pointer-events: auto;
   }
 
   /* Guide toggle switches list */
@@ -333,7 +336,7 @@
       let isDragging = false;
       let startX = 0;
       let startVal = 0;
-      let isTyping = false;
+      let hasMoved = false;
 
       const updateBar = (val) => {
         const norm = Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal)));
@@ -341,18 +344,21 @@
       };
 
       slider.addEventListener('mousedown', (e) => {
-        if (isTyping) return;
+        if (slider.classList.contains('typing')) return;
         isDragging = true;
+        hasMoved = false;
         startX = e.clientX;
         startVal = getFn();
         document.body.style.cursor = 'ew-resize';
+        e.preventDefault(); // 防止选中文本干扰滑动
       });
 
       window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         const dx = e.clientX - startX;
-        if (Math.abs(dx) > 1) {
-          const speed = e.shiftKey ? 0.002 : 0.01;
+        if (Math.abs(dx) > 0) {
+          hasMoved = true;
+          const speed = e.shiftKey ? 0.002 : 0.008;
           const newVal = Math.max(minVal, Math.min(maxVal, parseFloat((startVal + dx * speed).toFixed(stepPrecision))));
           setFn(newVal);
           input.value = newVal.toFixed(stepPrecision) + unit;
@@ -364,17 +370,18 @@
         if (isDragging) {
           isDragging = false;
           document.body.style.cursor = 'default';
+          // 如果只是单纯点击没有拖动，则触发输入编辑
+          if (!hasMoved && !slider.classList.contains('typing')) {
+            slider.classList.add('typing');
+            input.value = getFn().toFixed(stepPrecision);
+            input.focus();
+            input.select();
+          }
         }
       });
 
-      input.addEventListener('focus', () => {
-        isTyping = true;
-        input.value = getFn().toFixed(stepPrecision);
-        input.select();
-      });
-
       input.addEventListener('blur', () => {
-        isTyping = false;
+        slider.classList.remove('typing');
         const v = Math.max(minVal, Math.min(maxVal, parseFloat(input.value) || minVal));
         setFn(v);
         input.value = v.toFixed(stepPrecision) + unit;
@@ -387,7 +394,7 @@
 
       return {
         update: () => {
-          if (!isTyping && !isDragging) {
+          if (!slider.classList.contains('typing') && !isDragging) {
             const v = getFn();
             input.value = v.toFixed(stepPrecision) + unit;
             updateBar(v);
@@ -434,7 +441,7 @@
       let isDragging = false;
       let startX = 0;
       let startVal = 0;
-      let isTyping = false;
+      let hasMoved = false;
 
       const getVal = () => {
         const rot = picker.getAxisRotation ? picker.getAxisRotation() : { rotXDeg: 0, rotYDeg: 0, rotZDeg: 0 };
@@ -455,17 +462,20 @@
       };
 
       slider.addEventListener('mousedown', (e) => {
-        if (isTyping) return;
+        if (slider.classList.contains('typing')) return;
         isDragging = true;
+        hasMoved = false;
         startX = e.clientX;
         startVal = getVal();
         document.body.style.cursor = 'ew-resize';
+        e.preventDefault();
       });
 
       window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         const dx = e.clientX - startX;
-        if (Math.abs(dx) > 1) {
+        if (Math.abs(dx) > 0) {
+          hasMoved = true;
           const speed = e.shiftKey ? 0.1 : 0.6;
           const newVal = Math.round((startVal + dx * speed) * 10) / 10;
           setVal(newVal);
@@ -478,17 +488,17 @@
         if (isDragging) {
           isDragging = false;
           document.body.style.cursor = 'default';
+          if (!hasMoved && !slider.classList.contains('typing')) {
+            slider.classList.add('typing');
+            input.value = getVal().toFixed(1);
+            input.focus();
+            input.select();
+          }
         }
       });
 
-      input.addEventListener('focus', () => {
-        isTyping = true;
-        input.value = getVal().toFixed(1);
-        input.select();
-      });
-
       input.addEventListener('blur', () => {
-        isTyping = false;
+        slider.classList.remove('typing');
         const v = parseFloat(input.value) || 0;
         setVal(v);
         input.value = v.toFixed(1) + '°';
@@ -511,7 +521,7 @@
 
       return {
         update: () => {
-          if (!isTyping && !isDragging) {
+          if (!slider.classList.contains('typing') && !isDragging) {
             const v = getVal();
             input.value = v.toFixed(1) + '°';
             updateBar(v);
