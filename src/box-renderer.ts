@@ -1,4 +1,4 @@
-import type { Vec2, Vec3, ColorMode } from './types';
+import type { Vec2, Vec3, ColorMode, RGBColor } from './types';
 import { AXIS_LABELS } from './types';
 import { faceColor, valuesToRgb, rgbToHex } from './color-math';
 
@@ -59,6 +59,7 @@ export interface RenderContext {
 }
 
 export interface RenderState {
+  alphaMode: boolean;
   hoveredAxisHandle: number;
   draggingAxisHandle: number;
   hoveredFace: number;
@@ -70,6 +71,7 @@ export const DEFAULT_RENDER_STATE: RenderState = {
   draggingAxisHandle: -1,
   hoveredFace: -1,
   draggingFace: -1,
+  alphaMode: false,
 };
 
 export function createRenderContext(canvas: HTMLCanvasElement, viewportSize: number): RenderContext {
@@ -105,6 +107,7 @@ export function render(
   mode: ColorMode,
   rs: RenderState,
   showLabels = true,
+  alphaRing: { active: boolean; alpha: number; rgb: RGBColor } | null = null,
 ): void {
   const { ctx, scale, center, width, height } = rc;
   ctx.save();
@@ -130,6 +133,7 @@ export function render(
     const rgb = valuesToRgb(dotValues, mode);
     const dotRgb = invertMode ? { r: 255 - rgb.r, g: 255 - rgb.g, b: 255 - rgb.b } : rgb; // 内芯 = 该位置反转布局下的色值（与色块/数值一致）
     const dotPos = project(dotValues, scale, center);
+  if (alphaRing && alphaRing.active) drawAlphaRing(ctx, dotPos, alphaRing.rgb, alphaRing.alpha);
     drawColorDot(ctx, dotPos, dotRgb);
   }
 
@@ -373,6 +377,89 @@ function drawAxisHandles(ctx: CanvasRenderingContext2D, verts2d: Vec2[], rs: Ren
 
 // ── Color dot ─────────────────────────────────────────────────────────────
 
+
+// ── Alpha ring ────────────────────────────────────────────────────────────
+
+export const ALPHA_R_OUT = 30;
+export const ALPHA_R_IN = 13;
+
+function drawAlphaRing(ctx: CanvasRenderingContext2D, center: Vec2, rgb: { r: number; g: number; b: number }, alpha: number): void {
+  const mid = (ALPHA_R_OUT + ALPHA_R_IN) / 2;
+  const cell = 5;
+  const x0 = Math.floor(center.x / cell) * cell;
+  const y0 = Math.floor(center.y / cell) * cell;
+  const span = ALPHA_R_OUT * 2 + cell * 2;
+  const a = Math.max(0, Math.min(1, alpha));
+
+  // 环带裁剪
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, ALPHA_R_OUT, 0, Math.PI * 2);
+  ctx.arc(center.x, center.y, ALPHA_R_IN, 0, Math.PI * 2, true);
+  ctx.clip();
+
+  // 棋盘格底（透明指示）
+  for (let i = -1; i * cell <= span; i++) {
+    for (let j = -1; j * cell <= span; j++) {
+      ctx.fillStyle = (i + j) % 2 === 0 ? '#ffffff' : '#d9d9d9';
+      ctx.fillRect(x0 + i * cell, y0 + j * cell, cell, cell);
+    }
+  }
+
+  // alpha 锥形渐变：12 点方向 = 0%，顺时针转满一圈 = 100%
+  const rgba0 = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0)';
+  const rgba1 = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',1)';
+  const anyCtx = ctx as unknown as { createConicGradient?: (start: number, x: number, y: number) => CanvasGradient };
+  if (typeof anyCtx.createConicGradient === 'function') {
+    const grad = anyCtx.createConicGradient!(-Math.PI / 2, center.x, center.y);
+    grad.addColorStop(0, rgba0);
+    grad.addColorStop(1, rgba1);
+    ctx.fillStyle = grad;
+    ctx.fillRect(x0 - ALPHA_R_OUT, y0 - ALPHA_R_OUT, span, span);
+  } else {
+    // fallback：36 段 arc 模拟锥形渐变
+    const SEG = 36;
+    for (let k = 0; k < SEG; k++) {
+      const a0 = -Math.PI / 2 + (k / SEG) * Math.PI * 2;
+      const a1 = -Math.PI / 2 + ((k + 1) / SEG) * Math.PI * 2;
+      const t = (k + 0.5) / SEG;
+      ctx.beginPath();
+      ctx.moveTo(center.x + Math.cos(a0) * ALPHA_R_IN, center.y + Math.sin(a0) * ALPHA_R_IN);
+      ctx.arc(center.x, center.y, ALPHA_R_OUT, a0, a1);
+      ctx.arc(center.x, center.y, ALPHA_R_IN, a1, a0, true);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',' + t.toFixed(3) + ')';
+      ctx.fill();
+    }
+  }
+  ctx.restore();
+
+  // 环描边
+  ctx.beginPath();
+  ctx.arc(center.x, center.y, ALPHA_R_OUT, 0, Math.PI * 2);
+  ctx.arc(center.x, center.y, ALPHA_R_IN, 0, Math.PI * 2, true);
+  ctx.strokeStyle = 'rgba(0,0,0,.18)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // 12 点刻度
+  ctx.beginPath();
+  ctx.arc(center.x, center.y - ALPHA_R_OUT - 3, 1.8, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.fill();
+
+  // alpha 指示器（中径白点）
+  const ang = a * Math.PI * 2;
+  const ix = center.x + mid * Math.sin(ang);
+  const iy = center.y - mid * Math.cos(ang);
+  ctx.beginPath();
+  ctx.arc(ix, iy, 5.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.45)';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+}
 function drawColorDot(ctx: CanvasRenderingContext2D, pos: Vec2, rgb: { r: number; g: number; b: number }): void {
   // 圆形选择指示器：外环白 + 内部当前色
   ctx.beginPath();

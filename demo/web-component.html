@@ -42,6 +42,11 @@
       <h3>&lt;oklch-color-is-box&gt; <span class="model-value">(value: 0.700, 0.200, 30.0)</span></h3>
       <oklch-color-is-box id="picker4" value="0.700, 0.200, 30.0" size="300"></oklch-color-is-box>
     </div>
+    <div class="panel">
+      <h3>&lt;rgba-color-is-box&gt; <span class="model-value">(value: 255, 0, 0, 1)</span></h3>
+      <rgba-color-is-box id="picker5" value="255, 0, 0, 1" size="300"></rgba-color-is-box>
+      <p class="hint">按压指示器圆点 → 环形 alpha 环（12 点 = 0%，顺时针增大）</p>
+    </div>
   </div>
   <script src="../dist/color-is-box-element.iife.js"></script>
   <script>
@@ -57,7 +62,7 @@
     picker.addEventListener('change', (e) => show(e.detail));
     document.getElementById('setbtn').addEventListener('click', () => { picker.value = '#008fa0'; });
     // Model cards: keep the (value: ...) label in sync with each picker's current color
-    ['picker2', 'picker3', 'picker4'].forEach((id) => {
+    ['picker2', 'picker3', 'picker4', 'picker5'].forEach((id) => {
       const el = document.getElementById(id);
       const label = el.closest('.panel').querySelector('.model-value');
       el.addEventListener('change', () => { label.textContent = '(value: ' + el.getAttribute('value') + ')'; });

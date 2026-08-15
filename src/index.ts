@@ -77,6 +77,18 @@ export function createBoxColorPicker(
   let dotValues: Vec3 = { ...initialColor };
   let dotFace = 0; // start on the top face
 
+  // ── Alpha（环形 alpha 交互，仅当提供 options.alpha 时启用）──
+  const alphaEnabled = (): boolean => options.alpha !== undefined;
+  let alpha = Math.max(0, Math.min(1, options.alpha ?? 1));
+  function setAlpha(a: number): void {
+    const v = Math.max(0, Math.min(1, a));
+    if (v === alpha) return;
+    alpha = v;
+    emitChange();
+    updateUI();
+    scheduleRender();
+  }
+
   const listeners: Set<ColorChangeCallback> = new Set();
 
   // ── DOM ───────────────────────────────────────────────────────────────
@@ -120,6 +132,10 @@ export function createBoxColorPicker(
     () => rc.scale,
     () => rc.center,
     scheduleRender,
+    alphaEnabled,
+    setAlpha,
+    () => alpha,
+    () => project(dotValues, rc.scale, rc.center),
   );
 
   let boxInverted = false;
@@ -211,7 +227,7 @@ export function createBoxColorPicker(
   }
 
   function renderFrame(): void {
-    render(rc, boxExtent, dotValues, dotFace, mode, interaction.state, showAxisLabels);
+    render(rc, boxExtent, dotValues, dotFace, mode, interaction.state, showAxisLabels, { active: interaction.state.alphaMode, alpha, rgb: displayRgb() });
   }
 
   // ── UI updates ────────────────────────────────────────────────────────
@@ -284,6 +300,7 @@ export function createBoxColorPicker(
       hsb: rgbToHsb(rgb),
       oklch: rgbToOklch(rgb),
       hex: rgbToHex(rgb),
+      alpha,
     };
     for (const cb of listeners) cb(output);
   }
@@ -324,6 +341,8 @@ export function createBoxColorPicker(
     getMode: () => mode,
 
     setColor,
+    setAlpha,
+    getAlpha: () => alpha,
     setMode(m: ColorMode) {
       switchMode(m);
     },

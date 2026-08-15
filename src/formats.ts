@@ -23,9 +23,19 @@ export function parseModelValue(v: string, model: ColorModel): ModelValue | null
       if (m) return { r: +m[1], g: +m[2], b: +m[3] };
       return null;
     }
+    if (model === 'rgba') {
+      const m = s.match(/(\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s]+([\d.]+))?/);
+      if (m) return { rgb: { r: +m[1], g: +m[2], b: +m[3] }, alpha: m[4] !== undefined ? Math.min(1, +m[4]) : 1 };
+      return null;
+    }
     if (model === 'hsl') {
       const m = s.match(/([\d.]+)[,\s]+([\d.]+)%[,\s]+([\d.]+)%/);
       if (m) return hslToRgb(+m[1], +m[2], +m[3]);
+      return null;
+    }
+    if (model === 'hsla') {
+      const m = s.match(/([\d.]+)[,\s]+([\d.]+)%[,\s]+([\d.]+)%(?:[,\s]+([\d.]+))?/);
+      if (m) return { rgb: hslToRgb(+m[1], +m[2], +m[3]), alpha: m[4] !== undefined ? Math.min(1, +m[4]) : 1 };
       return null;
     }
     if (model === 'hsv') {
@@ -33,9 +43,29 @@ export function parseModelValue(v: string, model: ColorModel): ModelValue | null
       if (m) return hsbToRgb({ h: +m[1], s: +m[2], b: +m[3] });
       return null;
     }
+    if (model === 'hsva') {
+      const m = s.match(/([\d.]+)[,\s]+([\d.]+)%[,\s]+([\d.]+)%(?:[,\s]+([\d.]+))?/);
+      if (m) return { rgb: hsbToRgb({ h: +m[1], s: +m[2], b: +m[3] }), alpha: m[4] !== undefined ? Math.min(1, +m[4]) : 1 };
+      return null;
+    }
     if (model === 'oklch' || model === 'oklcha') {
       const m = s.match(/([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s]+([\d.]+))?/);
       if (m) return { rgb: oklchToRgb({ l: +m[1], c: +m[2], h: +m[3] }), alpha: m[4] !== undefined ? Math.min(1, +m[4]) : 1 };
+      return null;
+    }
+    if (model === 'rgba-string') {
+      const m = s.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/i);
+      if (m) return { rgb: { r: +m[1], g: +m[2], b: +m[3] }, alpha: m[4] !== undefined ? Math.min(1, +m[4]) : 1 };
+      return null;
+    }
+    if (model === 'hsla-string') {
+      const m = s.match(/hsla?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%(?:\s*,\s*([\d.]+))?\s*\)/i);
+      if (m) return { rgb: hslToRgb(+m[1], +m[2], +m[3]), alpha: m[4] !== undefined ? Math.min(1, +m[4]) : 1 };
+      return null;
+    }
+    if (model === 'hsva-string') {
+      const m = s.match(/hsva?\(\s*([\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%(?:\s*,\s*([\d.]+))?\s*\)/i);
+      if (m) return { rgb: hsbToRgb({ h: +m[1], s: +m[2], b: +m[3] }), alpha: m[4] !== undefined ? Math.min(1, +m[4]) : 1 };
       return null;
     }
   } catch { /* ignore */ }
@@ -46,13 +76,31 @@ export function formatModelValue(rgb: RGB, model: ColorModel, alpha = 1): string
   if (model === 'hex') return rgbToHex(rgb);
   if (model === 'hex-alpha') return rgbToHex(rgb) + (alpha < 1 ? Math.round(alpha * 255).toString(16).padStart(2, '0') : '');
   if (model === 'rgb') return `${rgb.r}, ${rgb.g}, ${rgb.b}`;
+  if (model === 'rgba') return `${rgb.r}, ${rgb.g}, ${rgb.b}, ${+alpha.toFixed(3)}`;
   if (model === 'hsl') {
     const h = rgbToHsl(rgb);
     return `${Math.round(h.h)}, ${Math.round(h.s)}%, ${Math.round(h.l)}%`;
   }
+  if (model === 'hsla') {
+    const h = rgbToHsl(rgb);
+    return `${Math.round(h.h)}, ${Math.round(h.s)}%, ${Math.round(h.l)}%, ${+alpha.toFixed(3)}`;
+  }
   if (model === 'hsv') {
     const h = rgbToHsb(rgb);
     return `${Math.round(h.h)}, ${Math.round(h.s)}%, ${Math.round(h.b)}%`;
+  }
+  if (model === 'hsva') {
+    const h = rgbToHsb(rgb);
+    return `${Math.round(h.h)}, ${Math.round(h.s)}%, ${Math.round(h.b)}%, ${+alpha.toFixed(3)}`;
+  }
+  if (model === 'rgba-string') return `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${+alpha.toFixed(3)})`;
+  if (model === 'hsla-string') {
+    const h = rgbToHsl(rgb);
+    return `hsla(${Math.round(h.h)}, ${Math.round(h.s)}%, ${Math.round(h.l)}%, ${+alpha.toFixed(3)})`;
+  }
+  if (model === 'hsva-string') {
+    const h = rgbToHsb(rgb);
+    return `hsva(${Math.round(h.h)}, ${Math.round(h.s)}%, ${Math.round(h.b)}%, ${+alpha.toFixed(3)})`;
   }
   const o = rgbToOklch(rgb);
   return `${o.l.toFixed(3)}, ${o.c.toFixed(3)}, ${o.h.toFixed(1)}`;

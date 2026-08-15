@@ -49,6 +49,8 @@ export interface PickerState {
 /** Configuration options for creating the picker. */
 export interface PickerOptions {
   initialColor?: RGBColor;
+  /** 初始 alpha 0–1（提供即启用环形 alpha 交互），默认 undefined = 不启用 */
+  alpha?: number;
   mode?: ColorMode;
   size?: number; // viewport size in px (square), default 300
   controls?: boolean;
@@ -63,6 +65,8 @@ export interface ColorOutput {
   hsb: HSBColor;
   oklch: OKLCHColor;
   hex: string;
+  /** 0–1，默认 1 */
+  alpha: number;
 }
 
 export type ColorChangeCallback = (color: ColorOutput) => void;
@@ -73,6 +77,8 @@ export interface BoxColorPicker {
   setColor(color: RGBColor): void;
   setMode(mode: ColorMode): void;
   getMode(): ColorMode;
+  setAlpha(a: number): void;
+  getAlpha(): number;
   on(event: 'change', callback: ColorChangeCallback): void;
   off(event: 'change', callback: ColorChangeCallback): void;
   destroy(): void;

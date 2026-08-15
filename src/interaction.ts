@@ -5,6 +5,8 @@ import {
   faceHitTest,
   faceHitTestUnclamped,
   FACES,
+  ALPHA_R_OUT,
+  ALPHA_R_IN,
   type RenderState,
   DEFAULT_RENDER_STATE,
 } from './box-renderer';
@@ -21,10 +23,36 @@ export function createInteraction(
   getScale: () => number,
   getCenter: () => Vec2,
   requestRender: () => void,
+  alphaEnabled: () => boolean,
+  onAlphaChange: (a: number) => void,
+  getAlpha: () => number,
+  getDotScreenPos: () => Vec2,
 ) {
   const state: RenderState = { ...DEFAULT_RENDER_STATE };
 
   function canvasPoint(e: MouseEvent | Touch): Vec2 {
+
+  // ── Alpha ring state machine ──────────────────────────────────────────
+  let alphaDragging = false;
+  const DOT_HIT_R = 9;
+
+  function distToDot(pt: Vec2): number {
+    const c = getDotScreenPos();
+    return Math.hypot(pt.x - c.x, pt.y - c.y);
+  }
+  // 12 点方向 = 0，顺时针增大，返回 0..2π
+  function alphaAngleOf(pt: Vec2): number {
+    const c = getDotScreenPos();
+    return (Math.atan2(pt.x - c.x, -(pt.y - c.y)) + Math.PI * 2) % (Math.PI * 2);
+  }
+  function applyAlphaFromPoint(pt: Vec2): void {
+    onAlphaChange(alphaAngleOf(pt) / (Math.PI * 2));
+    requestRender();
+  }
+  function inAlphaRing(pt: Vec2): boolean {
+    const d = distToDot(pt);
+    return d >= ALPHA_R_IN - 4 && d <= ALPHA_R_OUT + 6;
+  }
     const rect = canvas.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
@@ -236,6 +264,32 @@ export function createInteraction(
   function onMouseDown(e: MouseEvent): void {
     const pt = canvasPoint(e);
 
+    // Alpha ring 状态机（仅启用 alpha 的模型生效）
+    if (alphaEnabled()) {
+      if (state.alphaMode) {
+        if (distToDot(pt) <= DOT_HIT_R) {
+          state.alphaMode = false; // 再按圆点：关闭
+          requestRender();
+          return;
+        }
+        if (inAlphaRing(pt)) {
+          e.preventDefault();
+          alphaDragging = true;
+          applyAlphaFromPoint(pt);
+          return;
+        }
+        state.alphaMode = false; // 点环外：关闭
+        requestRender();
+        return;
+      }
+      if (distToDot(pt) <= DOT_HIT_R) {
+        e.preventDefault();
+        state.alphaMode = true; // 按压圆点：打开
+        requestRender();
+        return;
+      }
+    }
+
     const axisHit = hitTestAxisHandle(pt);
     if (axisHit >= 0) {
       e.preventDefault();
@@ -252,6 +306,12 @@ export function createInteraction(
 
   function onMouseMove(e: MouseEvent): void {
     const pt = canvasPoint(e);
+
+    if (alphaDragging) {
+      e.preventDefault();
+      applyAlphaFromPoint(pt);
+      return;
+    }
 
     if (dragAxis >= 0) {
       e.preventDefault();
@@ -280,6 +340,7 @@ export function createInteraction(
   }
 
   function onMouseUp(_e: MouseEvent): void {
+    alphaDragging = false;
     const wasDragging = dragAxis >= 0 || dragFace >= 0;
     endAxisDrag();
     endFaceDrag();
@@ -297,6 +358,15 @@ export function createInteraction(
     if (e.touches.length !== 1) return;
     const pt = canvasPoint(e.touches[0]);
 
+    if (alphaEnabled()) {
+      if (state.alphaMode) {
+        if (distToDot(pt) <= DOT_HIT_R) { state.alphaMode = false; requestRender(); return; }
+        if (inAlphaRing(pt)) { e.preventDefault(); alphaDragging = true; applyAlphaFromPoint(pt); return; }
+        state.alphaMode = false; requestRender(); return;
+      }
+      if (distToDot(pt) <= DOT_HIT_R) { e.preventDefault(); state.alphaMode = true; requestRender(); return; }
+    }
+
     const axisHit = hitTestAxisHandle(pt);
     if (axisHit >= 0) { e.preventDefault(); startAxisDrag(axisHit, pt); return; }
 
@@ -307,11 +377,13 @@ export function createInteraction(
   function onTouchMove(e: TouchEvent): void {
     if (e.touches.length !== 1) return;
     const pt = canvasPoint(e.touches[0]);
-    if (dragAxis >= 0) { e.preventDefault(); applyAxisDrag(pt); }
+    if (alphaDragging) { e.preventDefault(); applyAlphaFromPoint(pt); }
+    else if (dragAxis >= 0) { e.preventDefault(); applyAxisDrag(pt); }
     else if (dragFace >= 0) { e.preventDefault(); applyFaceDrag(pt, false, false); }
   }
 
   function onTouchEnd(_e: TouchEvent): void {
+    alphaDragging = false;
     endAxisDrag();
     endFaceDrag();
     requestRender();
@@ -320,6 +392,21 @@ export function createInteraction(
   // ── Keyboard ──────────────────────────────────────────────────────────
 
   function onKeyDown(e: KeyboardEvent): void {
+    if (state.alphaMode) {
+      if (e.key === 'Escape') { state.alphaMode = false; requestRender(); return; }
+      if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        onAlphaChange(Math.min(1, getAlpha() + (e.shiftKey ? 0.08 : 0.02)));
+        requestRender();
+        return;
+      }
+      if (e.key === 'ArrowDown' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        onAlphaChange(Math.max(0, getAlpha() - (e.shiftKey ? 0.08 : 0.02)));
+        requestRender();
+        return;
+      }
+    }
     const step = e.shiftKey ? 0.04 : 0.004;
     const dotVals = getDotValues();
     const ext = getBoxExtent();

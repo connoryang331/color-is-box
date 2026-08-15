@@ -36,6 +36,7 @@ class ColorIsBoxModelElement extends HTMLElement {
     const parsed = val ? parseModelValue(val, this.model) : null;
     this.alpha = parsed?.alpha ?? 1;
     const initial = parsed?.rgb ?? { r: 255, g: 255, b: 255 };
+    const ALPHA_MODELS = new Set(['hex-alpha', 'rgba', 'hsla', 'hsva', 'oklcha', 'rgba-string', 'hsla-string', 'hsva-string']);
     this.picker = createColorPicker(this.holder, {
       initialColor: initial,
       size,
@@ -43,45 +44,27 @@ class ColorIsBoxModelElement extends HTMLElement {
       showInputs: this.getAttribute('show-inputs') === 'true',
       showModeToggle: this.getAttribute('show-mode-toggle') === 'true',
       showCorners: this.getAttribute('show-corners') === 'true',
+      // alpha 模型：传入 alpha 启用环形 alpha 交互（替代线性滑杆）
+      ...(ALPHA_MODELS.has(this.model) ? { alpha: this.alpha } : {}),
     });
     this.picker.on('change', (c: any) => {
       if (this.internal) return;
       this.internal = true;
-      this.setAttribute('value', formatModelValue(c.rgb, this.model, this.alpha));
+      this.alpha = c.alpha;
+      this.setAttribute('value', formatModelValue(c.rgb, this.model, c.alpha));
       this.internal = false;
       this.dispatchEvent(new CustomEvent('change', { detail: c }));
-      this.dispatchEvent(new CustomEvent('color-changed', { detail: formatModelValue(c.rgb, this.model, this.alpha) }));
+      this.dispatchEvent(new CustomEvent('color-changed', { detail: formatModelValue(c.rgb, this.model, c.alpha) }));
     });
     if (mode) this.picker.setMode(mode);
 
-    // alpha 模型：自动附加透明度滑杆（vanilla-colorful 同款交互）
-    const ALPHA_MODELS = new Set(['hex-alpha', 'rgba', 'hsla', 'hsva', 'oklcha', 'rgba-string', 'hsla-string', 'hsva-string']);
-    if (ALPHA_MODELS.has(this.model)) {
-      const bar = document.createElement('input');
-      bar.type = 'range';
-      bar.min = '0';
-      bar.max = '100';
-      bar.value = String(Math.round(this.alpha * 100));
-      bar.style.cssText = 'width:100%;margin-top:8px;accent-color:#007AFF;';
-      bar.setAttribute('aria-label', 'Alpha');
-      bar.addEventListener('input', () => {
-        this.alpha = (+bar.value) / 100;
-        try {
-          const rgb = this.picker?.getColor().rgb ?? { r: 255, g: 255, b: 255 };
-          const fmt = formatModelValue(rgb, this.model, this.alpha);
-          this.setAttribute('value', fmt);
-          this.dispatchEvent(new CustomEvent('color-changed', { detail: fmt }));
-        } catch { /* ignore */ }
-      });
-      this.appendChild(bar);
-    }
   }
 
   attributeChangedCallback(name: string, _o: string | null, val: string | null): void {
     if (!this.picker || !val || this.internal) return;
     if (name === 'value') {
       const parsed = parseModelValue(val, this.model);
-      if (parsed) { this.alpha = parsed.alpha; this.picker.setColor(parsed.rgb); }
+      if (parsed) { this.alpha = parsed.alpha; this.picker.setColor(parsed.rgb); this.picker.setAlpha(parsed.alpha); }
     } else if (name === 'mode') {
       this.picker.setMode(val as ColorMode);
     }
