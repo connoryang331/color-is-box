@@ -125,8 +125,8 @@ export function createBoxColorPicker(
   let boxInverted = false;
   let showAxisLabels = true;
   // 鼠标进入/离开时随机切换 RGB 文本显示状态（无需按钮，多试几次即可看到两种状态）
-  canvas.addEventListener('mouseenter', () => { showAxisLabels = Math.random() < 0.5; scheduleRender(); });
-  canvas.addEventListener('mouseleave', () => { showAxisLabels = Math.random() < 0.5; scheduleRender(); });
+  canvas.addEventListener('mouseenter', () => { showAxisLabels = true; scheduleRender(); });
+  canvas.addEventListener('mouseleave', () => { showAxisLabels = false; scheduleRender(); });
 
   // 双击翻转颜色：整个立方体渐变取反 + 当前色取 RGB 补色（白色 ↔ 黑色；三个模式均生效）
   canvas.addEventListener('dblclick', () => {
