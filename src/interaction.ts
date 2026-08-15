@@ -9,6 +9,7 @@ import {
   ALPHA_R_IN,
   setViewRotation,
   getViewRotation,
+  resetViewRotation,
   type RenderState,
   DEFAULT_RENDER_STATE,
 } from './box-renderer';
@@ -512,6 +513,9 @@ export function createInteraction(
   // ── Keyboard ──────────────────────────────────────────────────────────
 
   function onKeyDown(e: KeyboardEvent): void {
+    // 视角预设：1 = 白点左上/黑点右下对角视图（灰轴沿屏幕对角线），0 = 回正（灰轴正对）
+    if (e.key === '1') { setViewRotation(Math.PI / 4, 0); requestRender(); return; }
+    if (e.key === '0') { resetViewRotation(); requestRender(); return; }
     if (state.alphaMode) {
       if (e.key === 'Escape') { state.alphaMode = false; requestRender(); return; }
       if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
