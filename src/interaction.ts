@@ -57,6 +57,7 @@ export function createInteraction(
   }
   function enterRotateMode(): void {
     rotatePressTimer = null;
+    state.alphaMode = false; // 关闭 alpha 环（屏幕空间正圆会与旋转中的立方体穿插）
     endFaceDrag();
     endAxisDrag();
     viewDragging = true;

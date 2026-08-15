@@ -142,16 +142,27 @@ export function render(
   const verts2d = boxVertices(boxExtent).map(v => project(v, scale, center));
 
 
+  // 旋转中（饱和度环显示）：立方体面/轴/标签淡出，避免与屏幕空间环穿插（穿模）
+  const rotFade = rs.viewRotating ? 0.32 : 1;
+  ctx.save();
+  ctx.globalAlpha = rotFade;
   drawAxisLines(ctx, scale, center, mode);
+  ctx.restore();
   // 边框阴影：贴合立方体外轮廓的柔和阴影（类似 CSS box-shadow 贴元素）
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.35)';
   ctx.shadowBlur = 8;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 2;
+  ctx.globalAlpha = rs.viewRotating ? 0.22 : 1;
   drawFaces(ctx, verts2d, boxExtent, mode);
   ctx.restore();
-  if (showLabels) drawAxisLabels(ctx, mode, scale, center);
+  if (showLabels) {
+    ctx.save();
+    ctx.globalAlpha = rs.viewRotating ? 0.5 : 1;
+    drawAxisLabels(ctx, mode, scale, center);
+    ctx.restore();
+  }
   // 视角旋转时：灰轴接近正对则画饱和度雷达网格；旋转中浮现环形饱和度盘
   // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
 
