@@ -83,6 +83,22 @@ export class ColorIsBoxElement extends ColorIsBoxModelElement {
 
 const MODELS: Array<[string, ColorModel]> = [
   ['color-is-box', 'hex'],
+  // vanilla-colorful compatible tags (14 pickers)
+  ['hex-color-picker', 'hex'],
+  ['hex-alpha-color-picker', 'hex-alpha'],
+  ['rgb-color-picker', 'rgb'],
+  ['rgb-string-color-picker', 'rgb-string'],
+  ['rgba-color-picker', 'rgba'],
+  ['rgba-string-color-picker', 'rgba-string'],
+  ['hsl-color-picker', 'hsl'],
+  ['hsl-string-color-picker', 'hsl-string'],
+  ['hsla-color-picker', 'hsla'],
+  ['hsla-string-color-picker', 'hsla-string'],
+  ['hsv-color-picker', 'hsv'],
+  ['hsv-string-color-picker', 'hsv-string'],
+  ['hsva-color-picker', 'hsva'],
+  ['hsva-string-color-picker', 'hsva-string'],
+  // ambient-ui prefixed extras
   ['color-is-box-rgb', 'rgb'],
   ['color-is-box-hsl', 'hsl'],
   ['color-is-box-hsv', 'hsv'],

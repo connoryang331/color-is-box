@@ -1,7 +1,7 @@
 // @ambient-ui/color-is-box — color model parse/format adapters (vanilla-colorful style)
 import { rgbToHsb, hsbToRgb, rgbToOklch, oklchToRgb, rgbToHex, hexToRgb } from './color-math';
 
-export type ColorModel = 'hex' | 'rgb' | 'hsl' | 'hsv' | 'oklch' | 'hex-alpha' | 'rgba' | 'hsla' | 'hsva';
+export type ColorModel = 'hex' | 'rgb' | 'hsl' | 'hsv' | 'oklch' | 'hex-alpha' | 'rgba' | 'hsla' | 'hsva' | 'rgb-string' | 'rgba-string' | 'hsl-string' | 'hsla-string' | 'hsv-string' | 'hsva-string';
 export type RGB = { r: number; g: number; b: number };
 
 export interface ModelValue { rgb: RGB; alpha: number; }
