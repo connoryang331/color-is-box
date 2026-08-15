@@ -171,6 +171,19 @@ export function render(
   ctx.restore();
   // 旋转时隐藏顶点字母标签（旋转是空间操作，标签只属于默认视角）
   if (showLabels && !rs.viewRotating) drawAxisLabels(ctx, mode, scale, center);
+  // 黑白端点圆点：白点（dot 为白时即其位置）的体对角线另一端 = 黑点，始终标出
+  if (rs.viewRotating) {
+    const pO = project({ x: 0, y: 0, z: 0 }, scale, center);
+    const pW = project({ x: 1, y: 1, z: 1 }, scale, center);
+    ctx.beginPath(); ctx.arc(pO.x, pO.y, 7, 0, Math.PI * 2); ctx.fillStyle = '#000'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(pW.x, pW.y, 7, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.font = '9px monospace';
+    ctx.fillStyle = 'rgba(51,65,85,.85)';
+    ctx.textAlign = 'left';
+    ctx.fillText('0', pO.x + 10, pO.y + 12);
+    ctx.fillText('255,255,255', pW.x + 10, pW.y + 12);
+  }
+  // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
   // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
 
   // Draw the color dot on the face
