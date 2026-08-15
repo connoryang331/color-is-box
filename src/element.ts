@@ -122,16 +122,6 @@ const MODELS: Array<[string, ColorModel]> = [
   ['oklcha-color-picker', 'oklcha'],
   ['hsva-color-picker', 'hsva'],
   ['hsva-string-color-picker', 'hsva-string'],
-  // ambient-ui prefixed extras
-  ['color-is-box-rgb', 'rgb'],
-  ['color-is-box-hsl', 'hsl'],
-  ['color-is-box-hsv', 'hsv'],
-  ['color-is-box-oklch', 'oklch'],
-  ['color-is-box-oklcha', 'oklcha'],
-  ['color-is-box-hex-alpha', 'hex-alpha'],
-  ['color-is-box-rgba', 'rgba'],
-  ['color-is-box-hsla', 'hsla'],
-  ['color-is-box-hsva', 'hsva'],
 ];
 for (const [tag, model] of MODELS) {
   if (!customElements.get(tag)) {
