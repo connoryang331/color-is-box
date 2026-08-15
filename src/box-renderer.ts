@@ -18,20 +18,35 @@ export function setViewRotation(yaw: number, pitch: number): void { viewYaw = ya
 export function getViewRotation(): { yaw: number; pitch: number } { return { yaw: viewYaw, pitch: viewPitch }; }
 export function resetViewRotation(): void { viewYaw = 0; viewPitch = 0; }
 
+/** 方向向量旋转（无中心偏移，用于法线等） */
+function rotDir(d: Vec3): Vec3 {
+  if (viewYaw === 0 && viewPitch === 0) return d;
+  const cy = Math.cos(viewYaw), sy = Math.sin(viewYaw);
+  const cx = Math.cos(viewPitch), sx = Math.sin(viewPitch);
+  const x = d.x * cy + d.z * sy;
+  const y = d.y;
+  const z = -d.x * sy + d.z * cy;
+  const y2 = y * cx - z * sx;
+  const z2 = y * sx + z * cx;
+  return { x, y: y2, z: z2 };
+}
+
+/** 视角旋转后的 3D 坐标（0,0 视角 = 恒等） */
+function rotPoint(p: Vec3): Vec3 {
+  if (viewYaw === 0 && viewPitch === 0) return p;
+  const v = { x: p.x - 0.5, y: p.y - 0.5, z: p.z - 0.5 };
+  const cy = Math.cos(viewYaw), sy = Math.sin(viewYaw);
+  const cx = Math.cos(viewPitch), sx = Math.sin(viewPitch);
+  const x = v.x * cy + v.z * sy;
+  const y = v.y;
+  const z = -v.x * sy + v.z * cy;
+  const y2 = y * cx - z * sx;
+  const z2 = y * sx + z * cx;
+  return { x: x + 0.5, y: y2 + 0.5, z: z2 + 0.5 };
+}
+
 export function project(p: Vec3, scale: number, center: Vec2): Vec2 {
-  // 中心化视角旋转：旋转后灰轴不再垂直屏幕（黑白分离、看到不同面）
-  let q = p;
-  if (viewYaw !== 0 || viewPitch !== 0) {
-    const v = { x: p.x - 0.5, y: p.y - 0.5, z: p.z - 0.5 };
-    const cy = Math.cos(viewYaw), sy = Math.sin(viewYaw);
-    const cx = Math.cos(viewPitch), sx = Math.sin(viewPitch);
-    const x = v.x * cy + v.z * sy;
-    const y = v.y;
-    const z = -v.x * sy + v.z * cy;
-    const y2 = y * cx - z * sx;
-    const z2 = y * sx + z * cx;
-    q = { x: x + 0.5, y: y2 + 0.5, z: z2 + 0.5 };
-  }
+  const q = rotPoint(p);
   return {
     x: center.x + (q.y - q.x) * COS30 * scale,
     y: center.y + q.z * scale - (q.x + q.y) * SIN30 * scale,
@@ -57,15 +72,21 @@ export interface FaceDef {
   fixedAxis: number;
   uAxis: number;
   vAxis: number;
+  /** 外法线（用于旋转后的正/背面判定；不依赖 quad 顺序，渐变方向不受影响） */
+  normal: Vec3;
 }
 
 export const FACES: FaceDef[] = [
-  // Top face — z fixed, varying x and y
-  { quad: [3, 5, 7, 6], fixedAxis: 2, uAxis: 0, vAxis: 1 },
-  // Right face — x fixed, varying y and z
-  { quad: [1, 4, 7, 5], fixedAxis: 0, uAxis: 1, vAxis: 2 },
-  // Left face — y fixed, varying x and z
-  { quad: [2, 4, 7, 6], fixedAxis: 1, uAxis: 0, vAxis: 2 },
+  // Top face — z fixed (1), varying x and y
+  { quad: [3, 5, 7, 6], fixedAxis: 2, uAxis: 0, vAxis: 1, normal: { x: 0, y: 0, z: 1 } },
+  // Right face — x fixed (1), varying y and z
+  { quad: [1, 4, 7, 5], fixedAxis: 0, uAxis: 1, vAxis: 2, normal: { x: 1, y: 0, z: 0 } },
+  // Left face — y fixed (1), varying x and z
+  { quad: [2, 4, 7, 6], fixedAxis: 1, uAxis: 0, vAxis: 2, normal: { x: 0, y: 1, z: 0 } },
+  // Back faces（旋转后可见）
+  { quad: [0, 2, 4, 1], fixedAxis: 2, uAxis: 1, vAxis: 0, normal: { x: 0, y: 0, z: -1 } }, // bottom — z fixed (0)
+  { quad: [0, 3, 6, 2], fixedAxis: 0, uAxis: 2, vAxis: 1, normal: { x: -1, y: 0, z: 0 } }, // back-left — x fixed (0)
+  { quad: [0, 1, 5, 3], fixedAxis: 1, uAxis: 0, vAxis: 2, normal: { x: 0, y: -1, z: 0 } }, // back-right — y fixed (0)
 ];
 
 const FACE_RES = 64; // 128→64: 逐像素渐变计算量降为 1/4，300px 画布经 drawImage 平滑放大，视觉无感知
@@ -139,13 +160,12 @@ export function render(
   ctx.save();
   ctx.clearRect(0, 0, width, height);
 
-  const verts2d = boxVertices(boxExtent).map(v => project(v, scale, center));
+  const verts3 = boxVertices(boxExtent);
+  const verts2d = verts3.map(v => project(v, scale, center));
 
-
-  // 旋转中（饱和度环显示）：立方体面/轴/标签淡出，避免与屏幕空间环穿插（穿模）
-  const rotFade = rs.viewRotating ? 0.32 : 1;
+  // 旋转中（饱和度环显示）：轴/标签淡出，面由 drawFaces 内部处理（正面 0.7 + 背面半透明）
   ctx.save();
-  ctx.globalAlpha = rotFade;
+  ctx.globalAlpha = rs.viewRotating ? 0.32 : 1;
   drawAxisLines(ctx, scale, center, mode);
   ctx.restore();
   // 边框阴影：贴合立方体外轮廓的柔和阴影（类似 CSS box-shadow 贴元素）
@@ -154,8 +174,7 @@ export function render(
   ctx.shadowBlur = 8;
   ctx.shadowOffsetX = 0;
   ctx.shadowOffsetY = 2;
-  ctx.globalAlpha = rs.viewRotating ? 0.22 : 1;
-  drawFaces(ctx, verts2d, boxExtent, mode);
+  drawFaces(ctx, verts2d, verts3, boxExtent, mode, rs.viewRotating);
   ctx.restore();
   if (showLabels) {
     ctx.save();
@@ -229,22 +248,44 @@ function drawBackEdges(ctx: CanvasRenderingContext2D, v: Vec2[]): void {
 function drawFaces(
   ctx: CanvasRenderingContext2D,
   verts2d: Vec2[],
+  verts3: Vec3[],
   boxExtent: Vec3,
   mode: ColorMode,
+  rotating: boolean,
 ): void {
   const ext = [boxExtent.x, boxExtent.y, boxExtent.z];
+  const rotFade = rotating ? 0.7 : 1; // 旋转时正面轻微淡出（饱和度环在上层）
 
   for (let fi = 0; fi < FACES.length; fi++) {
     const face = FACES[fi];
     const fixedVal = ext[face.fixedAxis];
     const uMax = ext[face.uAxis];
     const vMax = ext[face.vAxis];
-
     if (uMax < 0.002 && vMax < 0.002) continue;
 
-    const corners = face.quad.map(i => verts2d[i]);
-    renderFaceGradient(ctx, corners, face.fixedAxis, fixedVal, uMax, vMax, mode);
+    // 旋转后法线 → 正/背面判定（观察者在 (1,1,1) 方向）
+    const n = rotDir(face.normal);
+    const front = n.x + n.y + n.z > 0;
 
+    const corners = face.quad.map(i => verts2d[i]);
+    if (front) {
+      // 正面：渐变填充（默认全不透明；旋转时 0.7）
+      ctx.save();
+      ctx.globalAlpha = rotFade;
+      renderFaceGradient(ctx, corners, face.fixedAxis, fixedVal, uMax, vMax, mode);
+      ctx.restore();
+    } else {
+      // 背面：白色半透明（旋转时立方体保持实体，无空洞/穿模感）
+      ctx.save();
+      ctx.globalAlpha = rotating ? 0.14 : 0;
+      ctx.beginPath();
+      ctx.moveTo(corners[0].x, corners[0].y);
+      for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
+      ctx.closePath();
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+      ctx.restore();
+    }
   }
 }
 
