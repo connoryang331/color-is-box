@@ -62,7 +62,6 @@ export function createInteraction(
     endAxisDrag();
     viewDragging = true;
     state.viewRotating = true;
-    state.ringAlpha = Math.min(1, state.ringAlpha + 0.3);
     viewLastPt = null; // 由下一次 move 建立基准
     requestRender();
   }
@@ -358,7 +357,6 @@ export function createInteraction(
       viewDragging = true;
       viewLastPt = pt;
       state.viewRotating = true;
-      state.ringAlpha = Math.min(1, state.ringAlpha + 0.25);
       requestRender();
     }
   }
@@ -384,7 +382,6 @@ export function createInteraction(
         Math.max(-60, Math.min(60, v.pitch + dy * 0.12)),
       );
       if (dx !== 0) onSatChange(Math.max(0, Math.min(1, getSat() + dx * 0.002)));
-      state.ringAlpha = Math.min(1, state.ringAlpha + 0.12);
       viewLastPt = pt;
       requestRender();
       return;
@@ -431,7 +428,6 @@ export function createInteraction(
     if (viewDragging) {
       viewDragging = false;
       state.viewRotating = false;
-      state.ringAlpha = 0; // 环只存在旋转中，松手即消失（避免与雷达网格重叠）
       viewLastPt = null;
       requestRender();
     }
@@ -473,7 +469,6 @@ export function createInteraction(
       viewDragging = true;
       viewLastPt = pt;
       state.viewRotating = true;
-      state.ringAlpha = Math.min(1, state.ringAlpha + 0.25);
       requestRender();
     }
   }
@@ -492,7 +487,6 @@ export function createInteraction(
       const v = getViewRotation();
       setViewRotation(Math.max(-60, Math.min(60, v.yaw + dx * 0.12)), Math.max(-60, Math.min(60, v.pitch + dy * 0.12)));
       if (dx !== 0) onSatChange(Math.max(0, Math.min(1, getSat() + dx * 0.002)));
-      state.ringAlpha = Math.min(1, state.ringAlpha + 0.12);
       viewLastPt = pt;
       requestRender();
     }
@@ -506,7 +500,6 @@ export function createInteraction(
     if (viewDragging) {
       viewDragging = false;
       state.viewRotating = false;
-      state.ringAlpha = 0; // 环只存在旋转中，松手即消失（避免与雷达网格重叠）
       viewLastPt = null;
       requestRender();
     }

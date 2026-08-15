@@ -101,9 +101,8 @@ export interface RenderContext {
 
 export interface RenderState {
   alphaMode: boolean;
-  /** 旋转立方体（旋钮调饱和度）进行中：浮现环形饱和度盘 */
+  /** 旋转立方体（旋钮调饱和度）进行中 */
   viewRotating: boolean;
-  ringAlpha: number;
   hoveredAxisHandle: number;
   draggingAxisHandle: number;
   hoveredFace: number;
@@ -113,7 +112,6 @@ export interface RenderState {
 export const DEFAULT_RENDER_STATE: RenderState = {
   alphaMode: false,
   viewRotating: false,
-  ringAlpha: 0,
   hoveredAxisHandle: -1,
   draggingAxisHandle: -1,
   hoveredFace: -1,
@@ -154,7 +152,6 @@ export function render(
   rs: RenderState,
   showLabels = true,
   alphaRing: { active: boolean; alpha: number; rgb: RGBColor } | null = null,
-  satRing: { active: boolean; sat: number; rgb: RGBColor } | null = null,
 ): void {
   const { ctx, scale, center, width, height } = rc;
   ctx.save();
@@ -163,11 +160,7 @@ export function render(
   const verts3 = boxVertices(boxExtent);
   const verts2d = verts3.map(v => project(v, scale, center));
 
-  // 旋转中（饱和度环显示）：轴/标签淡出，面由 drawFaces 内部处理（正面 0.7 + 背面半透明）
-  ctx.save();
-  ctx.globalAlpha = rs.viewRotating ? 0.32 : 1;
   drawAxisLines(ctx, scale, center, mode);
-  ctx.restore();
   // 边框阴影：贴合立方体外轮廓的柔和阴影（类似 CSS box-shadow 贴元素）
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.35)';
@@ -176,14 +169,7 @@ export function render(
   ctx.shadowOffsetY = 2;
   drawFaces(ctx, verts2d, verts3, boxExtent, mode, rs.viewRotating);
   ctx.restore();
-  if (showLabels) {
-    ctx.save();
-    ctx.globalAlpha = rs.viewRotating ? 0.5 : 1;
-    drawAxisLabels(ctx, mode, scale, center);
-    ctx.restore();
-  }
-  // 旋转中浮现环形饱和度盘
-  if (satRing && satRing.active && rs.ringAlpha > 0.01) drawSatRing(ctx, scale, center, satRing.rgb, satRing.sat, rs.ringAlpha);
+  if (showLabels) drawAxisLabels(ctx, mode, scale, center);
   // 灰轴（黑↔白体对角线）：旋转后黑白分离才可见；端点色值 0 与 255,255,255
   if (rs.viewRotating) {
     const pO = project({ x: 0, y: 0, z: 0 }, scale, center);
@@ -275,7 +261,6 @@ function drawFaces(
   rotating: boolean,
 ): void {
   const ext = [boxExtent.x, boxExtent.y, boxExtent.z];
-  const rotFade = rotating ? 0.7 : 1; // 旋转时正面轻微淡出（饱和度环在上层）
 
   for (let fi = 0; fi < FACES.length; fi++) {
     const face = FACES[fi];
@@ -290,21 +275,13 @@ function drawFaces(
 
     const corners = face.quad.map(i => verts2d[i]);
     if (front) {
-      // 正面：渐变填充（默认全不透明；旋转时 0.7）
-      ctx.save();
-      ctx.globalAlpha = rotFade;
+      // 正面：完整渐变填充（颜色始终正确）
       renderFaceGradient(ctx, corners, face.fixedAxis, fixedVal, uMax, vMax, mode);
-      ctx.restore();
     } else {
-      // 背面：白色半透明（旋转时立方体保持实体，无空洞/穿模感）
+      // 背面：同款渐变但淡色（旋转时立方体保持实体，颜色语义不变）
       ctx.save();
-      ctx.globalAlpha = rotating ? 0.14 : 0;
-      ctx.beginPath();
-      ctx.moveTo(corners[0].x, corners[0].y);
-      for (let i = 1; i < 4; i++) ctx.lineTo(corners[i].x, corners[i].y);
-      ctx.closePath();
-      ctx.fillStyle = '#ffffff';
-      ctx.fill();
+      ctx.globalAlpha = rotating ? 0.28 : 0;
+      renderFaceGradient(ctx, corners, face.fixedAxis, fixedVal, uMax, vMax, mode);
       ctx.restore();
     }
   }
@@ -479,63 +456,6 @@ function drawAxisHandles(ctx: CanvasRenderingContext2D, verts2d: Vec2[], rs: Ren
 
 
 
-// ── Saturation radar grid + ring（旋转立方体的饱和度交互）──────────────
-
-const SAT_RING_RATIO_OUT = 0.48; // 环外半径 = scale × 比例
-const SAT_RING_RATIO_IN = 0.33;
-
-function drawSatRing(ctx: CanvasRenderingContext2D, scale: number, center: Vec2, rgb: { r: number; g: number; b: number }, sat: number, alpha: number): void {
-  const R_OUT = scale * SAT_RING_RATIO_OUT;
-  const R_IN = scale * SAT_RING_RATIO_IN;
-  const s = Math.max(0, Math.min(1, sat));
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  // 环带：径向渐变（内灰 0% → 外当前色相纯色 100%）
-  ctx.beginPath();
-  ctx.arc(center.x, center.y, R_OUT, 0, Math.PI * 2);
-  ctx.arc(center.x, center.y, R_IN, 0, Math.PI * 2, true);
-  ctx.clip();
-  const g = ctx.createRadialGradient(center.x, center.y, R_IN, center.x, center.y, R_OUT);
-  g.addColorStop(0, '#e7e7e7');
-  g.addColorStop(1, 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')');
-  ctx.fillStyle = g;
-  ctx.fillRect(center.x - R_OUT, center.y - R_OUT, R_OUT * 2, R_OUT * 2);
-  ctx.restore();
-  // 环描边
-  ctx.beginPath();
-  ctx.arc(center.x, center.y, R_OUT, 0, Math.PI * 2);
-  ctx.arc(center.x, center.y, R_IN, 0, Math.PI * 2, true);
-  ctx.strokeStyle = 'rgba(15,23,42,.35)';
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
-  // 刻度（12 点方向）
-  ctx.font = '10px monospace';
-  ctx.fillStyle = '#64748b';
-  ctx.textAlign = 'center';
-  for (const t of [0.25, 0.5, 0.75]) {
-    const rr = R_IN + (R_OUT - R_IN) * t;
-    ctx.fillText(Math.round(t * 100) + '%', center.x + rr + 10, center.y - 4);
-  }
-  // 指针：顶部径向位置 = 饱和度
-  const pr = R_IN + (R_OUT - R_IN) * s;
-  ctx.save();
-  ctx.setLineDash([3, 4]);
-  ctx.strokeStyle = 'rgba(100,116,139,.6)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(center.x, center.y - R_IN);
-  ctx.lineTo(center.x, center.y - pr);
-  ctx.stroke();
-  ctx.restore();
-  ctx.beginPath();
-  ctx.arc(center.x, center.y - pr, 6.5, 0, Math.PI * 2);
-  ctx.fillStyle = '#fff';
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(15,23,42,.55)';
-  ctx.lineWidth = 1.4;
-  ctx.stroke();
-  ctx.restore();
-}
 // ── Alpha ring ────────────────────────────────────────────────────────────
 
 export const ALPHA_R_OUT = 30;

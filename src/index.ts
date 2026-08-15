@@ -238,7 +238,7 @@ export function createBoxColorPicker(
   }
 
   function renderFrame(): void {
-    render(rc, boxExtent, dotValues, dotFace, mode, interaction.state, showAxisLabels, { active: interaction.state.alphaMode, alpha, rgb: displayRgb() }, { active: interaction.state.viewRotating || interaction.state.ringAlpha > 0, sat: rgbToHsb(displayRgb()).s / 100, rgb: hsbToRgb({ h: rgbToHsb(displayRgb()).h, s: 100, b: 100 }) });
+    render(rc, boxExtent, dotValues, dotFace, mode, interaction.state, showAxisLabels, { active: interaction.state.alphaMode, alpha, rgb: displayRgb() });
   }
 
   // ── UI updates ────────────────────────────────────────────────────────
