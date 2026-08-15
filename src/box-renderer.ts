@@ -183,6 +183,25 @@ export function render(
     ctx.fillText('0', pO.x + 10, pO.y + 12);
     ctx.fillText('255,255,255', pW.x + 10, pW.y + 12);
   }
+  // 8 个顶点颜色圆点（旋转时）：白色顶点的体对角线另一端 = 黑色顶点，所有顶点颜色完整呈现
+  if (rs.viewRotating) {
+    const VPT = [
+      { p: { x: 0, y: 0, z: 0 }, c: '#000000', r: 7 }, { p: { x: 1, y: 1, z: 1 }, c: '#ffffff', r: 7 },
+      { p: { x: 1, y: 0, z: 0 }, c: '#ff0000', r: 5 }, { p: { x: 0, y: 1, z: 0 }, c: '#00cc00', r: 5 },
+      { p: { x: 0, y: 0, z: 1 }, c: '#0000ff', r: 5 }, { p: { x: 1, y: 1, z: 0 }, c: '#ffff00', r: 5 },
+      { p: { x: 0, y: 1, z: 1 }, c: '#00dddd', r: 5 }, { p: { x: 1, y: 0, z: 1 }, c: '#ff00aa', r: 5 },
+    ];
+    for (const vp of VPT) {
+      const q = project(vp.p, scale, center);
+      ctx.beginPath(); ctx.arc(q.x, q.y, vp.r, 0, Math.PI * 2);
+      ctx.fillStyle = vp.c;
+      ctx.fill();
+      ctx.strokeStyle = vp.c === '#000000' ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.45)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+  }
+  // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
   // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
   // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
 
@@ -274,7 +293,7 @@ function drawFaces(
     } else {
       // 背面：同款渐变但淡色（旋转时立方体保持实体，颜色语义不变）
       ctx.save();
-      ctx.globalAlpha = rotating ? 0.5 : 0.22; // 背面始终半透明：黑色顶点（z=0/x=0/y=0 公共角）任何视角都可见
+      ctx.globalAlpha = 0; // 背面不画：立方体不透明实体渲染（凸体自然遮挡）
       renderFaceGradient(ctx, corners, face.fixedAxis, fixedVal, uMax, vMax, mode);
       ctx.restore();
     }
