@@ -53,6 +53,28 @@ class ColorIsBoxModelElement extends HTMLElement {
       this.dispatchEvent(new CustomEvent('color-changed', { detail: formatModelValue(c.rgb, this.model, this.alpha) }));
     });
     if (mode) this.picker.setMode(mode);
+
+    // alpha 模型：自动附加透明度滑杆（vanilla-colorful 同款交互）
+    const ALPHA_MODELS = new Set(['hex-alpha', 'rgba', 'hsla', 'hsva', 'rgba-string', 'hsla-string', 'hsva-string']);
+    if (ALPHA_MODELS.has(this.model)) {
+      const bar = document.createElement('input');
+      bar.type = 'range';
+      bar.min = '0';
+      bar.max = '100';
+      bar.value = String(Math.round(this.alpha * 100));
+      bar.style.cssText = 'width:100%;margin-top:8px;accent-color:#007AFF;';
+      bar.setAttribute('aria-label', 'Alpha');
+      bar.addEventListener('input', () => {
+        this.alpha = (+bar.value) / 100;
+        try {
+          const rgb = this.picker?.getColor().rgb ?? { r: 255, g: 255, b: 255 };
+          const fmt = formatModelValue(rgb, this.model, this.alpha);
+          this.setAttribute('value', fmt);
+          this.dispatchEvent(new CustomEvent('color-changed', { detail: fmt }));
+        } catch { /* ignore */ }
+      });
+      this.appendChild(bar);
+    }
   }
 
   attributeChangedCallback(name: string, _o: string | null, val: string | null): void {
