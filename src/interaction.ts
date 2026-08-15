@@ -346,7 +346,8 @@ export function createInteraction(
     if (faceHit) {
       e.preventDefault();
       startFaceDrag(faceHit.faceIndex, faceHit.s, faceHit.t, e.shiftKey);
-      startRotatePress(); // 长按 0.6s 不动 → 转为旋转模式（短按拖动 = 选色）
+      // 长按 0.6s 不动 → 转为旋转模式（alpha 环打开时不触发，短按拖动 = 选色）
+      if (!state.alphaMode) startRotatePress();
       return;
     }
 
@@ -462,7 +463,7 @@ export function createInteraction(
     if (axisHit >= 0) { e.preventDefault(); startAxisDrag(axisHit, pt); return; }
 
     const faceHit = hitTestFace(pt);
-    if (faceHit) { e.preventDefault(); startFaceDrag(faceHit.faceIndex, faceHit.s, faceHit.t, false); startRotatePress(); return; }
+    if (faceHit) { e.preventDefault(); startFaceDrag(faceHit.faceIndex, faceHit.s, faceHit.t, false); if (!state.alphaMode) startRotatePress(); return; }
     const c = getCenter();
     if (Math.hypot(pt.x - c.x, pt.y - c.y) > getScale() + 20) {
       e.preventDefault();
