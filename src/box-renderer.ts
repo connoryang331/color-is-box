@@ -171,56 +171,6 @@ export function render(
   ctx.restore();
   // 旋转时隐藏顶点字母标签（旋转是空间操作，标签只属于默认视角）
   if (showLabels && !rs.viewRotating) drawAxisLabels(ctx, mode, scale, center);
-  // 灰轴（黑↔白体对角线）：旋转后黑白分离才可见；端点色值 0 与 255,255,255
-  if (rs.viewRotating) {
-    const pO = project({ x: 0, y: 0, z: 0 }, scale, center);
-    const pW = project({ x: 1, y: 1, z: 1 }, scale, center);
-    // 灰轴 = 白→黑渐变线（白点端 #fff，黑点端 #000，沿线是灰色过渡）
-    const gGray = ctx.createLinearGradient(pW.x, pW.y, pO.x, pO.y);
-    gGray.addColorStop(0, '#ffffff');
-    gGray.addColorStop(1, '#000000');
-    // 外层柔光带（半透明宽渐变）增强可视性
-    ctx.save();
-    ctx.strokeStyle = gGray;
-    ctx.globalAlpha = 0.18;
-    ctx.lineWidth = 9;
-    ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(pO.x, pO.y); ctx.lineTo(pW.x, pW.y); ctx.stroke();
-    ctx.restore();
-    // 主体渐变线
-    ctx.save();
-    ctx.strokeStyle = gGray;
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(pO.x, pO.y); ctx.lineTo(pW.x, pW.y); ctx.stroke();
-    ctx.restore();
-    // 8 个立方体顶点指示（黑白两端的对角关系一目了然）
-    const VPT = [
-      { p: { x: 0, y: 0, z: 0 }, c: '#111111' }, { p: { x: 1, y: 1, z: 1 }, c: '#ffffff' },
-      { p: { x: 1, y: 0, z: 0 }, c: '#ff0000' }, { p: { x: 0, y: 1, z: 0 }, c: '#00cc00' },
-      { p: { x: 0, y: 0, z: 1 }, c: '#0000ff' }, { p: { x: 1, y: 1, z: 0 }, c: '#ffff00' },
-      { p: { x: 0, y: 1, z: 1 }, c: '#00dddd' }, { p: { x: 1, y: 0, z: 1 }, c: '#ff00aa' },
-    ];
-    for (const vp of VPT) {
-      const q = project(vp.p, scale, center);
-      const isExtreme = vp.c === '#111111' || vp.c === '#ffffff';
-      ctx.beginPath(); ctx.arc(q.x, q.y, isExtreme ? 7 : 4.5, 0, Math.PI * 2);
-      ctx.fillStyle = vp.c;
-      ctx.fill();
-      ctx.strokeStyle = vp.c === '#111111' ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.45)';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-    }
-    // 黑点 / 白点端点（放大 + 色值标注）
-    ctx.beginPath(); ctx.arc(pO.x, pO.y, 7, 0, Math.PI * 2); ctx.fillStyle = '#000'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.beginPath(); ctx.arc(pW.x, pW.y, 7, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1.2; ctx.stroke();
-    // 色值标注
-    ctx.font = '9px monospace';
-    ctx.fillStyle = 'rgba(51,65,85,.85)';
-    ctx.textAlign = 'left';
-    ctx.fillText('0', pO.x + 9, pO.y + 12);
-    ctx.fillText('255,255,255', pW.x + 9, pW.y + 12);
-  }
   // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
 
   // Draw the color dot on the face
