@@ -483,38 +483,13 @@ function renderFaceGradient(
 
   ctx.save();
 
-  // Clip to the exact face shape (supports rounded corners / bevel when radius > 0)
-  const rad = activeBox.radius || 0;
+  // Clip to the exact parallelogram so no antialiased fringe
+  // bleeds at the seams between adjacent faces (watertight).
   ctx.beginPath();
-  if (rad > 0.005) {
-    // 4 corners 向量计算
-    const rU = Math.min(rad, 0.45);
-    const rV = Math.min(rad, 0.45);
-    
-    const p0 = { x: p00.x + ax * rU, y: p00.y + ay * rU };
-    const p1 = { x: p10.x - ax * rU, y: p10.y - ay * rU };
-    const p2 = { x: p10.x + bx * rV, y: p10.y + by * rV };
-    const p3 = { x: p11.x - bx * rV, y: p11.y - by * rV };
-    const p4 = { x: p11.x - ax * rU, y: p11.y - ay * rU };
-    const p5 = { x: p01.x + ax * rU, y: p01.y + ay * rU };
-    const p6 = { x: p01.x - bx * rV, y: p01.y - by * rV };
-    const p7 = { x: p00.x + bx * rV, y: p00.y + by * rV };
-
-    ctx.moveTo(p0.x, p0.y);
-    ctx.lineTo(p1.x, p1.y);
-    ctx.quadraticCurveTo(p10.x, p10.y, p2.x, p2.y);
-    ctx.lineTo(p3.x, p3.y);
-    ctx.quadraticCurveTo(p11.x, p11.y, p4.x, p4.y);
-    ctx.lineTo(p5.x, p5.y);
-    ctx.quadraticCurveTo(p01.x, p01.y, p6.x, p6.y);
-    ctx.lineTo(p7.x, p7.y);
-    ctx.quadraticCurveTo(p00.x, p00.y, p0.x, p0.y);
-  } else {
-    ctx.moveTo(p00.x, p00.y);
-    ctx.lineTo(p10.x, p10.y);
-    ctx.lineTo(p11.x, p11.y);
-    ctx.lineTo(p01.x, p01.y);
-  }
+  ctx.moveTo(p00.x, p00.y);
+  ctx.lineTo(p10.x, p10.y);
+  ctx.lineTo(p11.x, p11.y);
+  ctx.lineTo(p01.x, p01.y);
   ctx.closePath();
   ctx.clip();
 
