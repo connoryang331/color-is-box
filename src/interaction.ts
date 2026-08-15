@@ -38,6 +38,22 @@ export function createInteraction(
   // ── Alpha ring state machine ──────────────────────────────────────────
   let alphaDragging = false;
   const DOT_HIT_R = 9;
+  const LONG_PRESS_MS = 1000; // 按压 1 秒进入 alpha 模式（双击反转不受影响：快速 up 即取消）
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  function startLongPress(): void {
+    cancelLongPress();
+    longPressTimer = setTimeout(enterAlphaMode, LONG_PRESS_MS);
+  }
+  function cancelLongPress(): void {
+    if (longPressTimer !== null) { clearTimeout(longPressTimer); longPressTimer = null; }
+  }
+  function enterAlphaMode(): void {
+    longPressTimer = null;
+    state.alphaMode = true;
+    endAxisDrag();
+    endFaceDrag(); // 结束进行中的选色拖拽，锁定 dot
+    requestRender();
+  }
 
   function distToDot(pt: Vec2): number {
     const c = getDotScreenPos();
@@ -102,6 +118,7 @@ export function createInteraction(
   }
 
   function applyAxisDrag(pt: Vec2): void {
+    cancelLongPress(); // 开始移动即取消长按
     if (dragAxis < 0) return;
 
     const dx = pt.x - dragStartMouse.x;
@@ -168,6 +185,7 @@ export function createInteraction(
   }
 
   function applyFaceDrag(pt: Vec2, shift: boolean, alt: boolean): void {
+    cancelLongPress(); // 开始移动即取消长按
     if (dragFace < 0) return;
 
     const ext = getBoxExtent();
@@ -283,10 +301,7 @@ export function createInteraction(
         return;
       }
       if (distToDot(pt) <= DOT_HIT_R) {
-        e.preventDefault();
-        state.alphaMode = true; // 按压圆点：打开
-        requestRender();
-        return;
+        startLongPress(); // 长按 1 秒开环；短按/拖动照常走 face 拖拽
       }
     }
 
@@ -340,6 +355,7 @@ export function createInteraction(
   }
 
   function onMouseUp(_e: MouseEvent): void {
+    cancelLongPress();
     alphaDragging = false;
     const wasDragging = dragAxis >= 0 || dragFace >= 0;
     endAxisDrag();
@@ -364,7 +380,7 @@ export function createInteraction(
         if (inAlphaRing(pt)) { e.preventDefault(); alphaDragging = true; applyAlphaFromPoint(pt); return; }
         state.alphaMode = false; requestRender(); return;
       }
-      if (distToDot(pt) <= DOT_HIT_R) { e.preventDefault(); state.alphaMode = true; requestRender(); return; }
+      if (distToDot(pt) <= DOT_HIT_R) { startLongPress(); }
     }
 
     const axisHit = hitTestAxisHandle(pt);
@@ -383,6 +399,7 @@ export function createInteraction(
   }
 
   function onTouchEnd(_e: TouchEvent): void {
+    cancelLongPress();
     alphaDragging = false;
     endAxisDrag();
     endFaceDrag();
@@ -449,6 +466,7 @@ export function createInteraction(
   canvas.setAttribute('tabindex', '0');
 
   function destroy(): void {
+    cancelLongPress();
     canvas.removeEventListener('mousedown', onMouseDown);
     window.removeEventListener('mousemove', onMouseMove);
     window.removeEventListener('mouseup', onMouseUp);
