@@ -155,7 +155,8 @@ export function render(
   // 视角旋转时：灰轴接近正对则画饱和度雷达网格；旋转中浮现环形饱和度盘
   const { yaw: vYaw, pitch: vPitch } = getViewRotation();
   const viewProximity = Math.max(0, Math.min(1, 1 - Math.max(Math.abs(vYaw), Math.abs(vPitch)) / 10));
-  if (viewProximity > 0.02) drawRadarGrid(ctx, scale, center, viewProximity);
+  // 网格仅在视角回正且未旋转时显示，且减淡（避免与立方体/饱和度环重叠）
+  if (viewProximity > 0.02 && !rs.viewRotating) drawRadarGrid(ctx, scale, center, viewProximity * 0.45);
   if (satRing && satRing.active && rs.ringAlpha > 0.01) drawSatRing(ctx, center, satRing.rgb, satRing.sat, rs.ringAlpha);
   // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
 

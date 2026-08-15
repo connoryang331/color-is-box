@@ -46,6 +46,25 @@ export function createInteraction(
   let touchActive = false;
   let viewDragging = false; // 旋转立方体（旋钮调饱和度）
   let viewLastPt: Vec2 | null = null;
+  const ROTATE_PRESS_MS = 600; // 任意位置长按进入旋转模式（与 alpha 长按同语言；dot 上长按仍是 alpha）
+  let rotatePressTimer: ReturnType<typeof setTimeout> | null = null;
+  function startRotatePress(): void {
+    cancelRotatePress();
+    rotatePressTimer = setTimeout(enterRotateMode, ROTATE_PRESS_MS);
+  }
+  function cancelRotatePress(): void {
+    if (rotatePressTimer !== null) { clearTimeout(rotatePressTimer); rotatePressTimer = null; }
+  }
+  function enterRotateMode(): void {
+    rotatePressTimer = null;
+    endFaceDrag();
+    endAxisDrag();
+    viewDragging = true;
+    state.viewRotating = true;
+    state.ringAlpha = Math.min(1, state.ringAlpha + 0.3);
+    viewLastPt = null; // 由下一次 move 建立基准
+    requestRender();
+  }
   const DOT_HIT_R = 9;
   const LONG_PRESS_MS = 1000; // 按压 1 秒进入 alpha 模式（双击反转不受影响：快速 up 即取消）
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -55,6 +74,7 @@ export function createInteraction(
   }
   function cancelLongPress(): void {
     if (longPressTimer !== null) { clearTimeout(longPressTimer); longPressTimer = null; }
+    cancelRotatePress();
   }
   function enterAlphaMode(): void {
     longPressTimer = null;
@@ -326,6 +346,7 @@ export function createInteraction(
     if (faceHit) {
       e.preventDefault();
       startFaceDrag(faceHit.faceIndex, faceHit.s, faceHit.t, e.shiftKey);
+      startRotatePress(); // 长按 0.6s 不动 → 转为旋转模式（短按拖动 = 选色）
       return;
     }
 
@@ -351,8 +372,9 @@ export function createInteraction(
     }
 
     // 旋转立方体：拧动 → 视角慢转 + 饱和度变化
-    if (viewDragging && viewLastPt) {
+    if (viewDragging) {
       e.preventDefault();
+      if (!viewLastPt) { viewLastPt = pt; return; } // 首帧建立基准（长按进入旋转模式后）
       const dx = pt.x - viewLastPt.x;
       const dy = pt.y - viewLastPt.y;
       const v = getViewRotation();
@@ -408,8 +430,7 @@ export function createInteraction(
     if (viewDragging) {
       viewDragging = false;
       state.viewRotating = false;
-      const v = getViewRotation();
-      if (Math.max(Math.abs(v.yaw), Math.abs(v.pitch)) > 5) state.ringAlpha = 0;
+      state.ringAlpha = 0; // 环只存在旋转中，松手即消失（避免与雷达网格重叠）
       viewLastPt = null;
       requestRender();
     }
@@ -444,7 +465,7 @@ export function createInteraction(
     if (axisHit >= 0) { e.preventDefault(); startAxisDrag(axisHit, pt); return; }
 
     const faceHit = hitTestFace(pt);
-    if (faceHit) { e.preventDefault(); startFaceDrag(faceHit.faceIndex, faceHit.s, faceHit.t, false); return; }
+    if (faceHit) { e.preventDefault(); startFaceDrag(faceHit.faceIndex, faceHit.s, faceHit.t, false); startRotatePress(); return; }
     const c = getCenter();
     if (Math.hypot(pt.x - c.x, pt.y - c.y) > getScale() + 20) {
       e.preventDefault();
@@ -462,8 +483,9 @@ export function createInteraction(
     if (alphaDragging) { e.preventDefault(); applyAlphaFromPoint(pt); }
     else if (touchActive && state.alphaMode && inAlphaRing(pt)) { e.preventDefault(); alphaDragging = true; applyAlphaFromPoint(pt); }
     else if (dragAxis >= 0) { e.preventDefault(); applyAxisDrag(pt); }
-    else if (viewDragging && viewLastPt) {
+    else if (viewDragging) {
       e.preventDefault();
+      if (!viewLastPt) { viewLastPt = pt; return; }
       const dx = pt.x - viewLastPt.x;
       const dy = pt.y - viewLastPt.y;
       const v = getViewRotation();
@@ -483,8 +505,7 @@ export function createInteraction(
     if (viewDragging) {
       viewDragging = false;
       state.viewRotating = false;
-      const v = getViewRotation();
-      if (Math.max(Math.abs(v.yaw), Math.abs(v.pitch)) > 5) state.ringAlpha = 0;
+      state.ringAlpha = 0; // 环只存在旋转中，松手即消失（避免与雷达网格重叠）
       viewLastPt = null;
       requestRender();
     }
