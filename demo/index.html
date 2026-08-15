@@ -227,8 +227,7 @@
           <label class="guide-toggle-item"><input type="checkbox" id="g-cy" checked><span class="guide-dot green"></span> Center Y</label>
           <label class="guide-toggle-item"><input type="checkbox" id="g-vz" checked><span class="guide-dot blue"></span> Vertex Z</label>
           <label class="guide-toggle-item"><input type="checkbox" id="g-cz" checked><span class="guide-dot blue"></span> Center Z</label>
-          <label class="guide-toggle-item"><input type="checkbox" id="g-yaw" checked>🔵 Yaw Arc</label>
-          <label class="guide-toggle-item"><input type="checkbox" id="g-pitch" checked>🔴 Pitch Arc</label>
+          <label class="guide-toggle-item" style="grid-column: span 2;"><input type="checkbox" id="g-angles" checked>📐 Yaw & Pitch Angles</label>
         </div>
       </div>
 
@@ -291,8 +290,7 @@
       centerX: document.getElementById('g-cx'),
       centerY: document.getElementById('g-cy'),
       centerZ: document.getElementById('g-cz'),
-      yawArc: document.getElementById('g-yaw'),
-      pitchArc: document.getElementById('g-pitch'),
+      angleGuides: document.getElementById('g-angles'),
     };
 
     Object.entries(guideCheckboxes).forEach(([key, el]) => {

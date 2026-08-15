@@ -120,11 +120,13 @@ export function drawGuides(
     ctx.stroke();
   }
 
-  // 3. 角度指示弧线 (Yaw / Pitch)
+  // 3. 角度指示弧线与度数角标 (Yaw / Pitch - 统一由 angleGuides 控制)
+  const showAngles = g.angleGuides !== undefined ? g.angleGuides : (g.yawArc || g.pitchArc || false);
   const yawDeg = Math.round((cam.rotZRad * 180 / Math.PI) * 10) / 10;
   const pitchDeg = Math.round((cam.rotXRad * 180 / Math.PI) * 10) / 10;
 
-  if (g.yawArc) {
+  if (showAngles) {
+    // 3.1 水平旋转弧线 (Yaw Arc)
     ctx.beginPath();
     const yawSegments = 36;
     for (let i = 0; i <= yawSegments; i++) {
@@ -143,9 +145,8 @@ export function drawGuides(
     ctx.setLineDash([3, 3]);
     ctx.stroke();
     ctx.setLineDash([]);
-  }
 
-  if (g.pitchArc) {
+    // 3.2 垂直俯仰弧线 (Pitch Arc)
     ctx.beginPath();
     const pitchSegments = 20;
     for (let i = 0; i <= pitchSegments; i++) {
@@ -164,20 +165,15 @@ export function drawGuides(
     ctx.setLineDash([3, 3]);
     ctx.stroke();
     ctx.setLineDash([]);
-  }
 
-  if (g.yawArc || g.pitchArc) {
+    // 3.3 左下角常驻角度读数
     ctx.font = '500 11px ui-monospace, "SF Mono", monospace';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'bottom';
-    if (g.yawArc) {
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.9)';
-      ctx.fillText(`Yaw: ${yawDeg.toFixed(1)}°`, 12, center.y * 2 - (g.pitchArc ? 24 : 10));
-    }
-    if (g.pitchArc) {
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
-      ctx.fillText(`Pitch: ${pitchDeg.toFixed(1)}°`, 12, center.y * 2 - 10);
-    }
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.9)';
+    ctx.fillText(`Yaw: ${yawDeg.toFixed(1)}°`, 12, center.y * 2 - 24);
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.9)';
+    ctx.fillText(`Pitch: ${pitchDeg.toFixed(1)}°`, 12, center.y * 2 - 10);
   }
 
   ctx.restore();

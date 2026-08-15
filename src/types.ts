@@ -71,8 +71,9 @@ export interface GuideVisibility {
   centerX: boolean;
   centerY: boolean;
   centerZ: boolean;
-  yawArc: boolean;
-  pitchArc: boolean;
+  angleGuides: boolean; // 合并统一控制：Yaw/Pitch 弧线与度数角标显隐
+  yawArc?: boolean;
+  pitchArc?: boolean;
 }
 
 export const DEFAULT_GUIDES: GuideVisibility = {
@@ -82,6 +83,7 @@ export const DEFAULT_GUIDES: GuideVisibility = {
   centerX: true,
   centerY: true,
   centerZ: true,
+  angleGuides: true,
   yawArc: true,
   pitchArc: true,
 };
