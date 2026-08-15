@@ -117,30 +117,6 @@ export function createBoxColorPicker(
   let guides: GuideVisibility = { ...DEFAULT_GUIDES };
   let allAxesVisible = true;
 
-  // 右侧快捷切换按钮：显示/隐藏全部辅助线
-  const axisToggleBtn = document.createElement('button');
-  axisToggleBtn.className = 'box-axis-toggle-btn active';
-  axisToggleBtn.title = 'Toggle All Guides';
-  axisToggleBtn.setAttribute('aria-label', 'Toggle All Guides');
-  axisToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 21V3"/><path d="M3 21l7-7"/><path d="M19 17l2 4-4-2"/><path d="M7 5l-4-2 2 4"/></svg>`;
-  axisToggleBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    allAxesVisible = !allAxesVisible;
-    guides = {
-      vertexX: allAxesVisible,
-      vertexY: allAxesVisible,
-      vertexZ: allAxesVisible,
-      centerX: allAxesVisible,
-      centerY: allAxesVisible,
-      centerZ: allAxesVisible,
-      yawArc: allAxesVisible,
-      pitchArc: allAxesVisible,
-    };
-    axisToggleBtn.classList.toggle('active', allAxesVisible);
-    scheduleRender();
-  });
-  root.appendChild(axisToggleBtn);
-
   // Controls (hex, swatch, mode toggle, channels) — only if enabled
   let swatch: HTMLDivElement | null = null;
   const controls = document.createElement('div');
@@ -405,10 +381,10 @@ export function createBoxColorPicker(
         centerX: v,
         centerY: v,
         centerZ: v,
+        angleGuides: v,
         yawArc: v,
         pitchArc: v,
       };
-      axisToggleBtn.classList.toggle('active', v);
       scheduleRender();
     },
     setZoom: (z: number) => {
