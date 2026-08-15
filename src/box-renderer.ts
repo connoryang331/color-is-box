@@ -194,9 +194,26 @@ export function render(
     ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(pO.x, pO.y); ctx.lineTo(pW.x, pW.y); ctx.stroke();
     ctx.restore();
-    // 黑点 / 白点端点
-    ctx.beginPath(); ctx.arc(pO.x, pO.y, 5, 0, Math.PI * 2); ctx.fillStyle = '#111'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 1; ctx.stroke();
-    ctx.beginPath(); ctx.arc(pW.x, pW.y, 5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 1; ctx.stroke();
+    // 8 个立方体顶点指示（黑白两端的对角关系一目了然）
+    const VPT = [
+      { p: { x: 0, y: 0, z: 0 }, c: '#111111' }, { p: { x: 1, y: 1, z: 1 }, c: '#ffffff' },
+      { p: { x: 1, y: 0, z: 0 }, c: '#ff0000' }, { p: { x: 0, y: 1, z: 0 }, c: '#00cc00' },
+      { p: { x: 0, y: 0, z: 1 }, c: '#0000ff' }, { p: { x: 1, y: 1, z: 0 }, c: '#ffff00' },
+      { p: { x: 0, y: 1, z: 1 }, c: '#00dddd' }, { p: { x: 1, y: 0, z: 1 }, c: '#ff00aa' },
+    ];
+    for (const vp of VPT) {
+      const q = project(vp.p, scale, center);
+      const isExtreme = vp.c === '#111111' || vp.c === '#ffffff';
+      ctx.beginPath(); ctx.arc(q.x, q.y, isExtreme ? 7 : 4.5, 0, Math.PI * 2);
+      ctx.fillStyle = vp.c;
+      ctx.fill();
+      ctx.strokeStyle = vp.c === '#111111' ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.45)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+    // 黑点 / 白点端点（放大 + 色值标注）
+    ctx.beginPath(); ctx.arc(pO.x, pO.y, 7, 0, Math.PI * 2); ctx.fillStyle = '#000'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(pW.x, pW.y, 7, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1.2; ctx.stroke();
     // 色值标注
     ctx.font = '9px monospace';
     ctx.fillStyle = 'rgba(51,65,85,.85)';
