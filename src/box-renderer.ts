@@ -48,7 +48,7 @@ export const FACES: FaceDef[] = [
   { quad: [2, 4, 7, 6], fixedAxis: 1, uAxis: 0, vAxis: 2 },
 ];
 
-const FACE_RES = 64; // 128→64：逐像素渐变计算量降为 1/4（300px 画布经 drawImage 平滑放大，视觉无感知）
+const FACE_RES = 64; // 128→64: 逐像素渐变计算量降为 1/4，300px 画布经 drawImage 平滑放大，视觉无感知
 
 export interface RenderContext {
   ctx: CanvasRenderingContext2D;
@@ -335,17 +335,12 @@ function drawAxisLabels(ctx: CanvasRenderingContext2D, mode: ColorMode, scale: n
   ctx.shadowOffsetY = 1;
   // 全部字母不描边，只保留柔和投影；部分字母改灰保证可读
   const grayIdx: Record<ColorMode, number[]> = { rgb: [], hsb: [2], oklch: [0] }; // 仅 L 灰；C 用顶点色
-  // 呼吸动画：透明度/字号缓慢波动（错峰），暗示顶点可拖拽，不新增任何形状
-  const t = performance.now() / 1000;
+  // 顶点字母：静态绘制（无呼吸动画），固定透明度与字号
   for (let i = 0; i < 3; i++) {
     const tx = positions[i].x + offsets[i].x;
     const ty = positions[i].y + offsets[i].y;
-    const phase = t * 1.8 + i * 2.1;
-    const breathe = 0.62 + 0.38 * (0.5 + 0.5 * Math.sin(phase));
-    const size = 11 + Math.round(1.6 * (0.5 + 0.5 * Math.sin(phase)));
-    ctx.globalAlpha = breathe;
-    ctx.font = `bold ${size}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-    const isGray = grayIdx[mode].includes(i);
+    ctx.globalAlpha = 0.8;
+    ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
     const hexC = isGray ? '#888888' : labelColors[i];
     ctx.fillStyle = hexC;
     ctx.fillText(labels[i], tx, ty);

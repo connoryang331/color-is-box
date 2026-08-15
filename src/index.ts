@@ -125,8 +125,8 @@ export function createBoxColorPicker(
   let boxInverted = false;
   let showAxisLabels = true;
   // 鼠标进入/离开时随机切换 RGB 文本显示状态（无需按钮，多试几次即可看到两种状态）
-  canvas.addEventListener('mouseenter', () => { showAxisLabels = Math.random() < 0.5; breathRunning = true; scheduleRender(); });
-  canvas.addEventListener('mouseleave', () => { showAxisLabels = Math.random() < 0.5; breathRunning = false; scheduleRender(); });
+  canvas.addEventListener('mouseenter', () => { showAxisLabels = Math.random() < 0.5; scheduleRender(); });
+  canvas.addEventListener('mouseleave', () => { showAxisLabels = Math.random() < 0.5; scheduleRender(); });
 
   // 双击翻转颜色：整个立方体渐变取反 + 当前色取 RGB 补色（白色 ↔ 黑色；三个模式均生效）
   canvas.addEventListener('dblclick', () => {
@@ -209,19 +209,6 @@ export function createBoxColorPicker(
       renderFrame();
     });
   }
-
-  // 呼吸动画循环：仅画布 hover 期间运行（15fps 限帧，顶点字母波动约 1.8Hz 足够），移出即停
-  let breathRunning = false;
-  let lastBreathAt = 0;
-  (function breathTick(): void {
-    if (!breathRunning) return;
-    const now = performance.now();
-    if (now - lastBreathAt >= 66) {
-      lastBreathAt = now;
-      scheduleRender();
-    }
-    requestAnimationFrame(breathTick);
-  })();
 
   function renderFrame(): void {
     render(rc, boxExtent, dotValues, dotFace, mode, interaction.state, showAxisLabels);
@@ -347,7 +334,6 @@ export function createBoxColorPicker(
       listeners.delete(callback);
     },
     destroy() {
-      breathRunning = false;
       interaction.destroy();
       if (animationId !== null) cancelAnimationFrame(animationId);
       container.removeChild(root);
