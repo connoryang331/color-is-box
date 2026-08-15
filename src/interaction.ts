@@ -37,6 +37,8 @@ export function createInteraction(
   }
   // ── Alpha ring state machine ──────────────────────────────────────────
   let alphaDragging = false;
+  let mouseDownActive = false; // 按住不松手：长按弹环后可直接移入环带操作
+  let touchActive = false;
   const DOT_HIT_R = 9;
   const LONG_PRESS_MS = 1000; // 按压 1 秒进入 alpha 模式（双击反转不受影响：快速 up 即取消）
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -280,6 +282,7 @@ export function createInteraction(
   // ── Mouse events ──────────────────────────────────────────────────────
 
   function onMouseDown(e: MouseEvent): void {
+    mouseDownActive = true;
     const pt = canvasPoint(e);
 
     // Alpha ring 状态机（仅启用 alpha 的模型生效）
@@ -328,6 +331,14 @@ export function createInteraction(
       return;
     }
 
+    // 长按弹环后按住不放：鼠标移入环带即开始调 alpha（无需松开再按）
+    if (mouseDownActive && state.alphaMode && inAlphaRing(pt)) {
+      e.preventDefault();
+      alphaDragging = true;
+      applyAlphaFromPoint(pt);
+      return;
+    }
+
     if (dragAxis >= 0) {
       e.preventDefault();
       applyAxisDrag(pt);
@@ -356,6 +367,7 @@ export function createInteraction(
 
   function onMouseUp(_e: MouseEvent): void {
     cancelLongPress();
+    mouseDownActive = false;
     alphaDragging = false;
     const wasDragging = dragAxis >= 0 || dragFace >= 0;
     endAxisDrag();
@@ -372,6 +384,7 @@ export function createInteraction(
 
   function onTouchStart(e: TouchEvent): void {
     if (e.touches.length !== 1) return;
+    touchActive = true;
     const pt = canvasPoint(e.touches[0]);
 
     if (alphaEnabled()) {
@@ -394,12 +407,14 @@ export function createInteraction(
     if (e.touches.length !== 1) return;
     const pt = canvasPoint(e.touches[0]);
     if (alphaDragging) { e.preventDefault(); applyAlphaFromPoint(pt); }
+    else if (touchActive && state.alphaMode && inAlphaRing(pt)) { e.preventDefault(); alphaDragging = true; applyAlphaFromPoint(pt); }
     else if (dragAxis >= 0) { e.preventDefault(); applyAxisDrag(pt); }
     else if (dragFace >= 0) { e.preventDefault(); applyFaceDrag(pt, false, false); }
   }
 
   function onTouchEnd(_e: TouchEvent): void {
     cancelLongPress();
+    touchActive = false;
     alphaDragging = false;
     endAxisDrag();
     endFaceDrag();
