@@ -11,9 +11,10 @@ let invertMode = false;
 /** 切换整个立方体的颜色翻转（所有面渐变取反，白↔黑） */
 export function setBoxInvert(v: boolean): void { invertMode = v; }
 
-// ── 视角旋转（0,0 = 灰轴正对，六边形视图）──
-let viewYaw = 0;
-let viewPitch = 0;
+// ── 视角旋转 ──
+// 默认视角 yaw=-40°/pitch=25°：可见面 = z=0（黑红黄绿）+ x=1/y=1（含白）→ 黑白顶点同时可见
+let viewYaw = -40 * Math.PI / 180;
+let viewPitch = 25 * Math.PI / 180;
 export function setViewRotation(yaw: number, pitch: number): void { viewYaw = yaw; viewPitch = pitch; }
 export function getViewRotation(): { yaw: number; pitch: number } { return { yaw: viewYaw, pitch: viewPitch }; }
 export function resetViewRotation(): void { viewYaw = 0; viewPitch = 0; }
@@ -182,24 +183,6 @@ export function render(
     ctx.textAlign = 'left';
     ctx.fillText('0', pO.x + 10, pO.y + 12);
     ctx.fillText('255,255,255', pW.x + 10, pW.y + 12);
-  }
-  // 8 个顶点颜色圆点（旋转时）：白色顶点的体对角线另一端 = 黑色顶点，所有顶点颜色完整呈现
-  if (rs.viewRotating) {
-    const VPT = [
-      { p: { x: 0, y: 0, z: 0 }, c: '#000000', r: 7 }, { p: { x: 1, y: 1, z: 1 }, c: '#ffffff', r: 7 },
-      { p: { x: 1, y: 0, z: 0 }, c: '#ff0000', r: 5 }, { p: { x: 0, y: 1, z: 0 }, c: '#00cc00', r: 5 },
-      { p: { x: 0, y: 0, z: 1 }, c: '#0000ff', r: 5 }, { p: { x: 1, y: 1, z: 0 }, c: '#ffff00', r: 5 },
-      { p: { x: 0, y: 1, z: 1 }, c: '#00dddd', r: 5 }, { p: { x: 1, y: 0, z: 1 }, c: '#ff00aa', r: 5 },
-    ];
-    for (const vp of VPT) {
-      const q = project(vp.p, scale, center);
-      ctx.beginPath(); ctx.arc(q.x, q.y, vp.r, 0, Math.PI * 2);
-      ctx.fillStyle = vp.c;
-      ctx.fill();
-      ctx.strokeStyle = vp.c === '#000000' ? 'rgba(255,255,255,.9)' : 'rgba(0,0,0,.45)';
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-    }
   }
   // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
   // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
