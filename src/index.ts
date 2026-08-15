@@ -4,8 +4,8 @@ import type {
 } from './types';
 import { AXIS_LABELS, AXIS_MAX, DEFAULT_GUIDES, DEFAULT_EDGE_CONFIG } from './types';
 import { rgbToHsb, hsbToRgb, rgbToOklch, rgbToHex, hexToRgb, rgbToValues, valuesToRgb, valuesToChannels } from './color-math';
-import { createRenderContext, render, setBoxInvert, project, faceHitTest, FACES, getCameraAnglesDeg, setCameraAnglesDeg, getRotationDeg, setRotationDeg, setZoomMultiplier, getZoomMultiplier, setBoxDimensions, getBoxDimensions, setEdgeStyle, getEdgeStyle } from './box-renderer';
-export { setBoxInvert, getCameraAnglesDeg, setCameraAnglesDeg, getRotationDeg, setRotationDeg, setZoomMultiplier, getZoomMultiplier, setBoxDimensions, getBoxDimensions, setEdgeStyle, getEdgeStyle, DEFAULT_GUIDES, DEFAULT_EDGE_CONFIG };
+import { createRenderContext, render, setBoxInvert, project, faceHitTest, FACES, getCameraAnglesDeg, setCameraAnglesDeg, getRotationDeg, setRotationDeg, setZoomMultiplier, getZoomMultiplier, setBoxDimensions, getBoxDimensions, setBoxRadius, getBoxRadius, setEdgeStyle, getEdgeStyle } from './box-renderer';
+export { setBoxInvert, getCameraAnglesDeg, setCameraAnglesDeg, getRotationDeg, setRotationDeg, setZoomMultiplier, getZoomMultiplier, setBoxDimensions, getBoxDimensions, setBoxRadius, getBoxRadius, setEdgeStyle, getEdgeStyle, DEFAULT_GUIDES, DEFAULT_EDGE_CONFIG };
 export type { GuideVisibility, EdgeStyleConfig };
 import { createInteraction } from './interaction';
 import { createControls } from './controls';
@@ -397,6 +397,11 @@ export function createBoxColorPicker(
       scheduleRender();
     },
     getDimensions: () => getBoxDimensions(),
+    setRadius: (r: number) => {
+      setBoxRadius(r);
+      scheduleRender();
+    },
+    getRadius: () => getBoxRadius(),
     getEdgeStyle: () => getEdgeStyle(),
     setEdgeStyle: (style: Partial<EdgeStyleConfig>) => {
       setEdgeStyle(style);

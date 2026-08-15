@@ -138,6 +138,10 @@ export interface BoxColorPicker {
   toggleAllGuides(visible?: boolean): void;
   getEdgeStyle(): EdgeStyleConfig;
   setEdgeStyle(style: Partial<EdgeStyleConfig>): void;
+  setDimensions(x: number, y: number, z: number): void;
+  getDimensions(): { sizeX: number; sizeY: number; sizeZ: number };
+  setRadius(r: number): void;
+  getRadius(): number;
   on(event: 'change', callback: ColorChangeCallback): void;
   off(event: 'change', callback: ColorChangeCallback): void;
   destroy(): void;

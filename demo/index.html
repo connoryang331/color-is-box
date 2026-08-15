@@ -216,6 +216,13 @@
           <input type="text" id="v-size-z" value="1.00">
         </div>
       </div>
+      <div class="row">
+        <span class="label" style="color: #d97706;">RADIUS</span>
+        <div class="blender-slider" id="slider-radius">
+          <div class="bar" style="background: #d97706; opacity: 0.22;"></div>
+          <input type="text" id="v-radius" value="0.00">
+        </div>
+      </div>
 
       <!-- Reset Button Row directly under SCALE -->
       <div style="margin-top: 6px; padding-top: 4px;">
@@ -596,6 +603,11 @@
       }
     }, 0.2, 2.5, '', 2);
 
+    // 8 顶点圆角倒角滑块 (Bevel / Radius)
+    const sRadius = makeGenericSlider('slider-radius', 'v-radius', () => picker.getRadius ? picker.getRadius() : 0.0, (v) => {
+      if (picker.setRadius) picker.setRadius(v);
+    }, 0.0, 0.25, '', 2);
+
     const sX = initBlenderSlider('slider-rot-x', 'v-rot-x', 'x', -180, 180);
     const sY = initBlenderSlider('slider-rot-y', 'v-rot-y', 'y', -180, 180);
     const sZ = initBlenderSlider('slider-rot-z', 'v-rot-z', 'z', -180, 180);
@@ -608,6 +620,7 @@
       sSizeX.update();
       sSizeY.update();
       sSizeZ.update();
+      sRadius.update();
       sEfW.update();
       sEbW.update();
       requestAnimationFrame(updateLoop);

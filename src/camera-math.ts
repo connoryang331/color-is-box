@@ -11,6 +11,7 @@ export interface BoxConfig {
   sizeX: number;
   sizeY: number;
   sizeZ: number;
+  radius: number; // 8 个顶点和 12 条棱边的倒角圆角半径 (0.0 ~ 0.25)
 }
 
 export const DEFAULT_CAMERA_CONFIG: CameraConfig = {
@@ -24,6 +25,7 @@ export const DEFAULT_BOX_CONFIG: BoxConfig = {
   sizeX: 1.0,
   sizeY: 1.0,
   sizeZ: 1.0,
+  radius: 0.0,
 };
 
 /**
