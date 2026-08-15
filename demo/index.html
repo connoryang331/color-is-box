@@ -231,25 +231,40 @@
         </div>
       </div>
 
-      <!-- 12 Cube Edges Style Controls -->
+      <!-- 12 Cube Edges Style Controls (Front & Back/Hidden Edges) -->
       <div class="guides-panel" style="margin-top: 10px; padding-top: 10px;">
         <div class="guide-header">
           <span>12 Cube Edges</span>
           <div class="btn-all-group">
-            <button class="btn-mini" id="btn-toggle-edges">Toggle Edges</button>
+            <button class="btn-mini" id="btn-toggle-edges">Toggle All</button>
           </div>
         </div>
-        <div class="guide-grid" style="margin-bottom: 6px;">
-          <label class="guide-toggle-item"><input type="checkbox" id="e-vis" checked>Front Edges</label>
-          <label class="guide-toggle-item"><input type="checkbox" id="e-hid">Hidden Edges</label>
-          <label class="guide-toggle-item"><input type="checkbox" id="e-dash">Dashed Edges</label>
-          <label class="guide-toggle-item"><input type="color" id="e-col" value="#ffffff" style="width: 20px; height: 18px; border: none; padding: 0; cursor: pointer; background: transparent;">Edge Color</label>
+        
+        <!-- Front Edges (前侧可见边) -->
+        <div style="font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin: 4px 0 2px 0;">Front Edges (Visible)</div>
+        <div class="guide-grid" style="margin-bottom: 4px;">
+          <label class="guide-toggle-item"><input type="checkbox" id="ef-vis" checked>Show Front</label>
+          <label class="guide-toggle-item"><input type="checkbox" id="ef-dash">Dashed</label>
         </div>
-        <div class="row" style="padding: 3px 0;">
-          <span class="label" style="font-size: 11px;">EDGE WIDTH</span>
-          <div class="blender-slider" id="slider-edge-w" style="width: 120px; height: 22px;">
+        <div class="row" style="padding: 2px 0;">
+          <span class="label" style="font-size: 11px;">FRONT WIDTH</span>
+          <div class="blender-slider" id="slider-ef-w" style="width: 115px; height: 22px;">
             <div class="bar" style="background: #e5e7eb;"></div>
-            <input type="text" id="v-edge-w" value="1.5px" style="font-size: 11px; line-height: 22px;">
+            <input type="text" id="v-ef-w" value="1.5px" style="font-size: 11px; line-height: 22px;">
+          </div>
+        </div>
+
+        <!-- Back / Hidden Edges (后侧暗部透视边) -->
+        <div style="font-size: 10px; font-weight: 700; color: #9ca3af; text-transform: uppercase; margin: 8px 0 2px 0; padding-top: 4px; border-top: 1px dashed #e5e7eb;">Back Edges (Hidden / Wireframe)</div>
+        <div class="guide-grid" style="margin-bottom: 4px;">
+          <label class="guide-toggle-item"><input type="checkbox" id="eb-vis" checked>Show Back</label>
+          <label class="guide-toggle-item"><input type="checkbox" id="eb-dash" checked>Dashed</label>
+        </div>
+        <div class="row" style="padding: 2px 0;">
+          <span class="label" style="font-size: 11px;">BACK WIDTH</span>
+          <div class="blender-slider" id="slider-eb-w" style="width: 115px; height: 22px;">
+            <div class="bar" style="background: #9ca3af;"></div>
+            <input type="text" id="v-eb-w" value="1.0px" style="font-size: 11px; line-height: 22px;">
           </div>
         </div>
       </div>
@@ -401,35 +416,36 @@
       };
     };
 
-    // ── 12 Cube Edges Controls Logic ──
-    const eVis = document.getElementById('e-vis');
-    const eHid = document.getElementById('e-hid');
-    const eDash = document.getElementById('e-dash');
-    const eCol = document.getElementById('e-col');
+    // ── 12 Cube Edges Controls Logic (Front & Back) ──
+    const efVis = document.getElementById('ef-vis');
+    const efDash = document.getElementById('ef-dash');
+    const ebVis = document.getElementById('eb-vis');
+    const ebDash = document.getElementById('eb-dash');
     const btnToggleEdges = document.getElementById('btn-toggle-edges');
 
     const updateEdgeStyle = () => {
       if (picker && picker.setEdgeStyle) {
         picker.setEdgeStyle({
-          showVisible: eVis.checked,
-          showHidden: eHid.checked,
-          dashed: eDash.checked,
-          color: eCol.value,
+          showFront: efVis.checked,
+          frontDashed: efDash.checked,
+          showBack: ebVis.checked,
+          backDashed: ebDash.checked,
         });
       }
     };
 
-    [eVis, eHid, eDash, eCol].forEach(el => el.addEventListener('input', updateEdgeStyle));
+    [efVis, efDash, ebVis, ebDash].forEach(el => el.addEventListener('input', updateEdgeStyle));
 
     let allEdgesOn = true;
     btnToggleEdges.addEventListener('click', () => {
       allEdgesOn = !allEdgesOn;
-      eVis.checked = allEdgesOn;
-      eHid.checked = allEdgesOn;
+      efVis.checked = allEdgesOn;
+      ebVis.checked = allEdgesOn;
       updateEdgeStyle();
     });
 
-    const sEdgeW = makeGenericSlider('slider-edge-w', 'v-edge-w', () => picker.getEdgeStyle ? picker.getEdgeStyle().width : 1.5, (w) => { if (picker.setEdgeStyle) picker.setEdgeStyle({ width: w }); }, 0.5, 8.0, 'px', 1);
+    const sEfW = makeGenericSlider('slider-ef-w', 'v-ef-w', () => picker.getEdgeStyle ? picker.getEdgeStyle().frontWidth : 1.5, (w) => { if (picker.setEdgeStyle) picker.setEdgeStyle({ frontWidth: w }); }, 0.5, 8.0, 'px', 1);
+    const sEbW = makeGenericSlider('slider-eb-w', 'v-eb-w', () => picker.getEdgeStyle ? picker.getEdgeStyle().backWidth : 1.0, (w) => { if (picker.setEdgeStyle) picker.setEdgeStyle({ backWidth: w }); }, 0.5, 8.0, 'px', 1);
 
     // ── Blender-style Slider & Input Logic ──
     const initBlenderSlider = (sliderId, inputId, axis, minVal, maxVal) => {
@@ -541,7 +557,8 @@
       sZ.update();
       sZoom.update();
       sScale.update();
-      sEdgeW.update();
+      sEfW.update();
+      sEbW.update();
       requestAnimationFrame(updateLoop);
     };
     requestAnimationFrame(updateLoop);

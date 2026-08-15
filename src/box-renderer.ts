@@ -183,58 +183,114 @@ export function getEdgeStyle(): EdgeStyleConfig {
   return { ...activeEdgeStyle };
 }
 
-// 12条边线在顶点中的索引对 (0: 000, 1: 100, 2: 010, 3: 001, 4: 110, 5: 101, 6: 011, 7: 111)
-const ALL_12_EDGES: [number, number][] = [
-  // 底面 4 条边 (z=0)
-  [0, 1], [1, 4], [4, 2], [2, 0],
-  // 顶面 4 条边 (z=1)
-  [3, 5], [5, 7], [7, 6], [6, 3],
-  // 纵向 4 条立柱边
-  [0, 3], [1, 5], [4, 7], [2, 6],
+/**
+ * 立方体 12 条边以及其相邻的两个面索引 (0: -X, 1: +X, 2: -Y, 3: +Y, 4: -Z, 5: +Z)
+ */
+const EDGE_TOPOLOGY: { edge: [number, number]; faces: [number, number] }[] = [
+  // 底面 4 条边 (z=0, -Z面为 4)
+  { edge: [0, 1], faces: [4, 2] }, // -Z, -Y
+  { edge: [1, 4], faces: [4, 1] }, // -Z, +X
+  { edge: [4, 2], faces: [4, 3] }, // -Z, +Y
+  { edge: [2, 0], faces: [4, 0] }, // -Z, -X
+
+  // 顶面 4 条边 (z=1, +Z面为 5)
+  { edge: [3, 5], faces: [5, 2] }, // +Z, -Y
+  { edge: [5, 7], faces: [5, 1] }, // +Z, +X
+  { edge: [7, 6], faces: [5, 3] }, // +Z, +Y
+  { edge: [6, 3], faces: [5, 0] }, // +Z, -X
+
+  // 4 条纵向立柱边
+  { edge: [0, 3], faces: [0, 2] }, // -X, -Y
+  { edge: [1, 5], faces: [1, 2] }, // +X, -Y
+  { edge: [4, 7], faces: [1, 3] }, // +X, +Y
+  { edge: [2, 6], faces: [0, 3] }, // -X, +Y
 ];
 
 /**
- * 绘制立方体 12 条棱边
+ * 绘制立方体 12 条棱边（严格根据面可见性精确区分 Front 前侧边 与 Back / Hidden 暗部透视边）
  */
 function draw12CubeEdges(
   ctx: CanvasRenderingContext2D,
   verts2d: Vec2[],
   verts3: Vec3[],
+  boxExtent: Vec3,
   style: EdgeStyleConfig,
 ): void {
-  if (!style.showVisible && !style.showHidden) return;
+  if (!style.showFront && !style.showBack) return;
 
-  ctx.save();
-  ctx.lineWidth = style.width;
-  if (style.dashed) ctx.setLineDash([4, 3]);
-  else ctx.setLineDash([]);
+  const ext = [boxExtent.x, boxExtent.y, boxExtent.z];
+  const isFaceVisible: boolean[] = new Array(FACES.length).fill(false);
 
-  // 计算每条边的深度及是否面向视点
-  for (const [a, b] of ALL_12_EDGES) {
-    const vA = verts2d[a];
-    const vB = verts2d[b];
-    const mid3: Vec3 = {
-      x: (verts3[a].x + verts3[b].x) * 0.5,
-      y: (verts3[a].y + verts3[b].y) * 0.5,
-      z: (verts3[a].z + verts3[b].z) * 0.5,
+  // 1. 先计算 6 个面在当前相机视角下的可见性 (背面剔除)
+  for (let fi = 0; fi < FACES.length; fi++) {
+    const face = FACES[fi];
+    const fixedVal = face.fixedValue * ext[face.fixedAxis];
+    const uMax = ext[face.uAxis];
+    const vMax = ext[face.vAxis];
+
+    const center3: Vec3 = { x: 0, y: 0, z: 0 };
+    const keys: (keyof Vec3)[] = ['x', 'y', 'z'];
+    (center3 as any)[keys[face.fixedAxis]] = fixedVal;
+    (center3 as any)[keys[face.uAxis]] = uMax * 0.5;
+    (center3 as any)[keys[face.vAxis]] = vMax * 0.5;
+    const camCenter = cameraTransform(center3);
+
+    const normEnd: Vec3 = {
+      x: center3.x + face.normal.x * 0.1,
+      y: center3.y + face.normal.y * 0.1,
+      z: center3.z + face.normal.z * 0.1,
     };
-    const camMid = cameraTransform(mid3);
-    const isFront = camMid.z <= 0; // 相机正前方/前侧边
+    const camNormEnd = cameraTransform(normEnd);
+    const camNormZ = camNormEnd.z - camCenter.z;
 
-    if (isFront && style.showVisible) {
-      ctx.strokeStyle = style.color;
-      ctx.globalAlpha = style.opacity;
-      ctx.beginPath();
-      ctx.moveTo(vA.x, vA.y);
-      ctx.lineTo(vB.x, vB.y);
-      ctx.stroke();
-    } else if (!isFront && style.showHidden) {
-      ctx.strokeStyle = style.color;
-      ctx.globalAlpha = style.opacity * 0.45; // 暗部背部透视边
-      ctx.beginPath();
-      ctx.moveTo(vA.x, vA.y);
-      ctx.lineTo(vB.x, vB.y);
-      ctx.stroke();
+    // 外法线朝向相机 (Z < 0) 即为前向可见面
+    if (camNormZ < 0) {
+      isFaceVisible[fi] = true;
+    }
+  }
+
+  // 2. 区分前侧可见边 (至少一个相邻面可见) 与 后侧透视暗边 (两个相邻面都不可见 / 背光)
+  ctx.save();
+
+  // 绘制后侧暗边 (Back / Hidden Edges)
+  if (style.showBack) {
+    ctx.lineWidth = style.backWidth;
+    if (style.backDashed) ctx.setLineDash([4, 3]);
+    else ctx.setLineDash([]);
+    ctx.strokeStyle = style.backColor;
+    ctx.globalAlpha = style.backOpacity;
+
+    for (const item of EDGE_TOPOLOGY) {
+      const [f1, f2] = item.faces;
+      const isFrontEdge = isFaceVisible[f1] || isFaceVisible[f2];
+      if (!isFrontEdge) {
+        const [a, b] = item.edge;
+        ctx.beginPath();
+        ctx.moveTo(verts2d[a].x, verts2d[a].y);
+        ctx.lineTo(verts2d[b].x, verts2d[b].y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  // 绘制前侧可见边 (Front Visible Edges)
+  if (style.showFront) {
+    ctx.lineWidth = style.frontWidth;
+    if (style.frontDashed) ctx.setLineDash([4, 3]);
+    else ctx.setLineDash([]);
+    ctx.strokeStyle = style.frontColor;
+    ctx.globalAlpha = style.frontOpacity;
+
+    for (const item of EDGE_TOPOLOGY) {
+      const [f1, f2] = item.faces;
+      const isFrontEdge = isFaceVisible[f1] || isFaceVisible[f2];
+      if (isFrontEdge) {
+        const [a, b] = item.edge;
+        ctx.beginPath();
+        ctx.moveTo(verts2d[a].x, verts2d[a].y);
+        ctx.lineTo(verts2d[b].x, verts2d[b].y);
+        ctx.stroke();
+      }
     }
   }
 
@@ -270,8 +326,8 @@ export function render(
   drawFaces(ctx, verts2d, verts3, boxExtent, mode, rs.viewRotating);
   ctx.restore();
 
-  // 2. 绘制 12 条棱边（高可配置）
-  draw12CubeEdges(ctx, verts2d, verts3, activeEdgeStyle);
+  // 2. 绘制 12 条棱边（严格根据面可见性精确区分 Front / Back 透视边）
+  draw12CubeEdges(ctx, verts2d, verts3, boxExtent, activeEdgeStyle);
 
   // 3. 绘制辅助参考线（解耦独立模块 guide-renderer）
   const g: GuideVisibility = typeof guides === 'boolean'

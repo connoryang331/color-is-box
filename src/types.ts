@@ -47,21 +47,29 @@ export interface PickerState {
 }
 
 export interface EdgeStyleConfig {
-  showVisible: boolean;   // 前景可见边
-  showHidden: boolean;    // 背部遮挡暗边（透视骨架）
-  width: number;          // 边线粗细 (px)
-  dashed: boolean;        // 是否虚线
-  color: string;          // 线条颜色 (支持 rgba / hex)
-  opacity: number;        // 透明度 0..1
+  showFront: boolean;      // 显示前侧可见边（Front Edges）
+  showBack: boolean;       // 显示后侧被遮挡暗边（Back / Hidden Edges 透视线）
+  frontWidth: number;      // 前侧边线粗细 (px)
+  backWidth: number;       // 后侧边线粗细 (px)
+  frontDashed: boolean;    // 前侧边线是否虚线
+  backDashed: boolean;     // 后侧边线是否虚线
+  frontColor: string;      // 前侧边线颜色
+  backColor: string;       // 后侧边线颜色
+  frontOpacity: number;    // 前侧边透明度 0..1
+  backOpacity: number;     // 后侧边透明度 0..1
 }
 
 export const DEFAULT_EDGE_CONFIG: EdgeStyleConfig = {
-  showVisible: true,
-  showHidden: false,
-  width: 1.5,
-  dashed: false,
-  color: '#ffffff',
-  opacity: 0.45,
+  showFront: true,
+  showBack: true,
+  frontWidth: 1.5,
+  backWidth: 1.0,
+  frontDashed: false,
+  backDashed: true,
+  frontColor: '#ffffff',
+  backColor: '#ffffff',
+  frontOpacity: 0.65,
+  backOpacity: 0.25,
 };
 
 export interface GuideVisibility {
