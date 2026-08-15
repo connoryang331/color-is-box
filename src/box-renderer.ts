@@ -249,8 +249,8 @@ function draw12CubeEdges(
     const camNormEnd = cameraTransform(normEnd);
     const camNormZ = camNormEnd.z - camCenter.z;
 
-    // 外法线朝向相机 (Z < 0) 即为前向可见面
-    if (camNormZ < 0) {
+    // 外法线朝向相机 (camNormZ > 0) 即为前向可见面
+    if (camNormZ > 0) {
       isFaceVisible[fi] = true;
     }
   }
@@ -399,8 +399,8 @@ function drawFaces(
     const camNormEnd = cameraTransform(normEnd);
     const camNormZ = camNormEnd.z - camCenter.z;
 
-    // 在正交相机下，面向相机的面其外法线满足 camNormZ < 0 (朝向视点)
-    if (camNormZ < 0) {
+    // 外法线朝向相机 (camNormZ > 0) 即为前向可见面
+    if (camNormZ > 0) {
       const corners = face.quad.map(i => verts2d[i]);
       visibleFaces.push({
         face,
@@ -413,8 +413,8 @@ function drawFaces(
     }
   }
 
-  // 从远到近排序绘制
-  visibleFaces.sort((a, b) => b.depth - a.depth);
+  // 从远(小Z)到近(大Z)排序绘制
+  visibleFaces.sort((a, b) => a.depth - b.depth);
 
   for (const item of visibleFaces) {
     renderFaceGradient(
