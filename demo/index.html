@@ -224,11 +224,25 @@
         </div>
       </div>
 
-      <!-- Reset Button Row directly under SCALE -->
-      <div style="margin-top: 6px; padding-top: 4px;">
-        <button id="btn-reset-view" style="width: 100%; height: 28px; background: #f9fafb; border: 1px solid #d1d5db; border-radius: 5px; font-size: 11px; font-weight: 600; color: #374151; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: all 0.15s; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-          Reset View & Defaults
+      <!-- Quick Preset Icon Buttons (Cube Default / Cuboid Preset) -->
+      <div style="margin-top: 8px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+        <button id="btn-preset-cube" class="btn-mini" style="height: 30px; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; background: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+          <!-- 3D Cube Icon -->
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+            <line x1="12" y1="22.08" x2="12" y2="12"/>
+          </svg>
+          Cube (Default)
+        </button>
+        <button id="btn-preset-cuboid" class="btn-mini" style="height: 30px; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; background: #ffffff; border: 1px solid #d1d5db; border-radius: 6px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+          <!-- 3D Cuboid / Rectangular Prism Icon -->
+          <svg viewBox="0 0 24 24" width="16" height="15" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 14.5V9.5a1.5 1.5 0 0 0-.75-1.3l-9-4.2a1.5 1.5 0 0 0-1.5 0l-9 4.2A1.5 1.5 0 0 0 1 9.5v5a1.5 1.5 0 0 0 .75 1.3l9 4.2a1.5 1.5 0 0 0 1.5 0l9-4.2a1.5 1.5 0 0 0 .75-1.3z"/>
+            <polyline points="1.5 9 11.5 13.5 21.5 9"/>
+            <line x1="11.5" y1="20" x2="11.5" y2="13.5"/>
+          </svg>
+          Cuboid
         </button>
       </div>
 
@@ -349,19 +363,28 @@
       if (picker && picker.toggleAllGuides) picker.toggleAllGuides(false);
     });
 
-    // ── Quick Reset Logic ──
-    document.getElementById('btn-reset-view').addEventListener('click', () => {
+    // ── Quick Presets: Cube (Default Reset) & Cuboid ──
+    document.getElementById('btn-preset-cube').addEventListener('click', () => {
       if (picker.setAxisRotation) picker.setAxisRotation(20, 0, -30);
       if (picker.setZoom) picker.setZoom(1.0);
       if (picker.setDimensions) picker.setDimensions(1.0, 1.0, 1.0);
+      if (picker.setRadius) picker.setRadius(0.0);
       if (picker.setColor) picker.setColor({ r: 255, g: 255, b: 255 });
       if (picker.toggleAllGuides) picker.toggleAllGuides(true);
-      if (picker.setEdgeStyle) picker.setEdgeStyle({ showVisible: true, showHidden: false, width: 1.5, dashed: false, color: '#ffffff' });
+      if (picker.setEdgeStyle) picker.setEdgeStyle({ showFront: true, frontDashed: false, frontWidth: 1.5, showBack: true, backDashed: true, backWidth: 1.0 });
       Object.values(guideCheckboxes).forEach(el => el.checked = true);
-      document.getElementById('e-vis').checked = true;
-      document.getElementById('e-hid').checked = false;
-      document.getElementById('e-dash').checked = false;
-      document.getElementById('e-col').value = '#ffffff';
+      document.getElementById('ef-vis').checked = true;
+      document.getElementById('ef-dash').checked = false;
+      document.getElementById('eb-vis').checked = true;
+      document.getElementById('eb-dash').checked = true;
+    });
+
+    document.getElementById('btn-preset-cuboid').addEventListener('click', () => {
+      if (picker.setAxisRotation) picker.setAxisRotation(25, 0, -45);
+      if (picker.setZoom) picker.setZoom(1.0);
+      if (picker.setDimensions) picker.setDimensions(1.6, 0.7, 1.0); // 长方体比例
+      if (picker.setRadius) picker.setRadius(0.05); // 优雅微倒角
+      if (picker.setColor) picker.setColor({ r: 255, g: 255, b: 255 });
     });
 
     // ── Generic Blender Slider Component ──
