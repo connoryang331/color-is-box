@@ -236,7 +236,9 @@
         <div class="guide-header">
           <span>12 Cube Edges</span>
           <div class="btn-all-group">
-            <button class="btn-mini" id="btn-toggle-edges">Toggle All</button>
+            <button class="btn-mini" id="btn-toggle-front" title="Toggle Front Edges">Front</button>
+            <button class="btn-mini" id="btn-toggle-back" title="Toggle Back Edges">Back</button>
+            <button class="btn-mini" id="btn-toggle-edges" title="Toggle All Edges">All</button>
           </div>
         </div>
         
@@ -421,6 +423,8 @@
     const efDash = document.getElementById('ef-dash');
     const ebVis = document.getElementById('eb-vis');
     const ebDash = document.getElementById('eb-dash');
+    const btnToggleFront = document.getElementById('btn-toggle-front');
+    const btnToggleBack = document.getElementById('btn-toggle-back');
     const btnToggleEdges = document.getElementById('btn-toggle-edges');
 
     const updateEdgeStyle = () => {
@@ -435,6 +439,16 @@
     };
 
     [efVis, efDash, ebVis, ebDash].forEach(el => el.addEventListener('input', updateEdgeStyle));
+
+    btnToggleFront.addEventListener('click', () => {
+      efVis.checked = !efVis.checked;
+      updateEdgeStyle();
+    });
+
+    btnToggleBack.addEventListener('click', () => {
+      ebVis.checked = !ebVis.checked;
+      updateEdgeStyle();
+    });
 
     let allEdgesOn = true;
     btnToggleEdges.addEventListener('click', () => {
