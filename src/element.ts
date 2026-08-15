@@ -118,6 +118,7 @@ const MODELS: Array<[string, ColorModel]> = [
   ['hsla-string-color-picker', 'hsla-string'],
   ['hsv-color-picker', 'hsv'],
   ['hsv-string-color-picker', 'hsv-string'],
+  ['oklch-color-picker', 'oklch'],
   ['hsva-color-picker', 'hsva'],
   ['hsva-string-color-picker', 'hsva-string'],
   // ambient-ui prefixed extras
