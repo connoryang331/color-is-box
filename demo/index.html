@@ -15,10 +15,10 @@
   #how-card { position: fixed; left: 24px; bottom: 24px; }
   h3 { margin: 0 0 16px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; }
   .rows { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-  .row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; }
-  .row .label { font-size: 12px; font-weight: 600; color: #6b7280; letter-spacing: .01em; }
-  /* Left aligned values */
-  .row .val { font: 12.5px/1.5 ui-monospace, "SF Mono", "Cascadia Code", monospace; color: #111827; letter-spacing: .01em; text-align: left; margin-left: 12px; flex: 1; }
+  .row { display: flex; align-items: center; padding: 7px 0; }
+  .row .label { font-size: 12px; font-weight: 600; color: #6b7280; letter-spacing: .01em; width: 62px; flex-shrink: 0; }
+  /* Left aligned values - strictly vertically aligned */
+  .row .val { font: 12.5px/1.5 ui-monospace, "SF Mono", "Cascadia Code", monospace; color: #111827; letter-spacing: .01em; text-align: left; margin-left: 0; flex: 1; }
 
   /* Blender-style numeric slider (Blender 3D exact UI theme) */
   .blender-slider {
@@ -161,7 +161,7 @@
     <div class="rows">
       <div class="row"><span class="label">HEX</span><span class="val" id="v-hex">#ffffff</span></div>
       <div class="row"><span class="label">RGB</span><span class="val" id="v-rgb">255, 255, 255</span></div>
-      <div class="row"><span class="label">HSB</span><span class="val" id="v-hsb">0.0, 0.0, 100.0</span></div>
+      <div class="row"><span class="label">HSV</span><span class="val" id="v-hsv">0.0, 0.0, 100.0</span></div>
       <div class="row"><span class="label">OKLCH</span><span class="val" id="v-oklch">1.000, 0.000, 0.0</span></div>
       
       <!-- 3D Rotation Controls -->
@@ -291,7 +291,7 @@
     const show = (c) => {
       document.getElementById('v-hex').textContent = c.hex;
       document.getElementById('v-rgb').textContent = c.rgb.r + ', ' + c.rgb.g + ', ' + c.rgb.b;
-      document.getElementById('v-hsb').textContent = c.hsb.h.toFixed(1) + ', ' + c.hsb.s.toFixed(1) + ', ' + c.hsb.b.toFixed(1);
+      document.getElementById('v-hsv').textContent = c.hsb.h.toFixed(1) + ', ' + c.hsb.s.toFixed(1) + ', ' + c.hsb.b.toFixed(1);
       document.getElementById('v-oklch').textContent = c.oklch.l.toFixed(3) + ', ' + c.oklch.c.toFixed(3) + ', ' + c.oklch.h.toFixed(1);
     };
     picker.on('change', show);
