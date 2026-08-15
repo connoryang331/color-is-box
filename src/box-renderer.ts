@@ -48,7 +48,7 @@ export const FACES: FaceDef[] = [
   { quad: [2, 4, 7, 6], fixedAxis: 1, uAxis: 0, vAxis: 2 },
 ];
 
-const FACE_RES = 128;
+const FACE_RES = 64; // 128→64：逐像素渐变计算量降为 1/4（300px 画布经 drawImage 平滑放大，视觉无感知）
 
 export interface RenderContext {
   ctx: CanvasRenderingContext2D;
