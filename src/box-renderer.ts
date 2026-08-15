@@ -175,10 +175,23 @@ export function render(
   if (rs.viewRotating) {
     const pO = project({ x: 0, y: 0, z: 0 }, scale, center);
     const pW = project({ x: 1, y: 1, z: 1 }, scale, center);
+    // 灰轴 = 白→黑渐变线（白点端 #fff，黑点端 #000，沿线是灰色过渡）
+    const gGray = ctx.createLinearGradient(pW.x, pW.y, pO.x, pO.y);
+    gGray.addColorStop(0, '#ffffff');
+    gGray.addColorStop(1, '#000000');
+    // 外层柔光带（半透明宽渐变）增强可视性
     ctx.save();
-    ctx.setLineDash([6, 5]);
-    ctx.strokeStyle = 'rgba(107,114,128,.75)';
-    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = gGray;
+    ctx.globalAlpha = 0.18;
+    ctx.lineWidth = 9;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(pO.x, pO.y); ctx.lineTo(pW.x, pW.y); ctx.stroke();
+    ctx.restore();
+    // 主体渐变线
+    ctx.save();
+    ctx.strokeStyle = gGray;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
     ctx.beginPath(); ctx.moveTo(pO.x, pO.y); ctx.lineTo(pW.x, pW.y); ctx.stroke();
     ctx.restore();
     // 黑点 / 白点端点
