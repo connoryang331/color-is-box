@@ -169,7 +169,8 @@ export function render(
   ctx.shadowOffsetY = 2;
   drawFaces(ctx, verts2d, verts3, boxExtent, mode, rs.viewRotating);
   ctx.restore();
-  if (showLabels) drawAxisLabels(ctx, mode, scale, center);
+  // 旋转时隐藏顶点字母标签（旋转是空间操作，标签只属于默认视角）
+  if (showLabels && !rs.viewRotating) drawAxisLabels(ctx, mode, scale, center);
   // 灰轴（黑↔白体对角线）：旋转后黑白分离才可见；端点色值 0 与 255,255,255
   if (rs.viewRotating) {
     const pO = project({ x: 0, y: 0, z: 0 }, scale, center);
