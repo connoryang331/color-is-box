@@ -34,7 +34,7 @@ export function parseModelValue(v: string, model: ColorModel): ModelValue | null
       return null;
     }
     if (model === 'oklch' || model === 'oklcha') {
-      const m = s.match(/([\\d.]+)[,\\s]+([\\d.]+)[,\\s]+([\\d.]+)(?:[,\\s]+([\\d.]+))?/);
+      const m = s.match(/([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)(?:[,\s]+([\d.]+))?/);
       if (m) return { rgb: oklchToRgb({ l: +m[1], c: +m[2], h: +m[3] }), alpha: m[4] !== undefined ? Math.min(1, +m[4]) : 1 };
       return null;
     }
