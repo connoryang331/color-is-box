@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>立方体挤压 — 轴长与色域</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f4f6; margin: 0; padding: 36px 20px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #374151; }
+  .sub { margin: 0; font-size: 13px; color: #6b7280; max-width: 780px; text-align: center; line-height: 1.7; }
+  .row { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px 20px; box-shadow: 0 6px 20px rgba(0,0,0,.07); }
+  h3 { margin: 0 0 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; }
+  pre { font: 13px/1.8 ui-monospace, monospace; color: #111827; margin: 0; }
+  .hint { font-size: 12px; color: #9ca3af; line-height: 1.8; }
+  canvas#cv { display: block; border-radius: 12px; background: #fff; border: 1px solid #e5e7eb; touch-action: none; }
+  .slider-row { display: flex; align-items: center; gap: 10px; margin: 8px 0; font: 600 13px ui-monospace, monospace; }
+  .slider-row label { width: 22px; }
+  .slider-row input { flex: 1; accent-color: #2563eb; }
+  .slider-row .val { width: 44px; text-align: right; color: #6b7280; }
+  .sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(0,0,0,.15); vertical-align: -2px; margin-right: 5px; }
+</style>
+</head>
+<body>
+  <h1>Cube Squeeze · 轴长挤压</h1>
+  <p class="sub">拖动三个滑块挤压 R/G/B 轴：轴长 = 该通道动态范围上限（×255）。等比挤压 → 整体变暗（局部白变灰）；单轴挤压 → 偏色。立方体收缩为原空间的一个子盒，dot 只能在子盒内活动。</p>
+  <div class="row">
+    <div class="panel">
+      <canvas id="cv" width="620" height="470"></canvas>
+    </div>
+    <div class="panel">
+      <h3>轴长（动态范围）</h3>
+      <div class="slider-row"><label style="color:#dc2626">R</label><input type="range" id="sR" min="10" max="100" value="100"><span class="val" id="vR">255</span></div>
+      <div class="slider-row"><label style="color:#16a34a">G</label><input type="range" id="sG" min="10" max="100" value="100"><span class="val" id="vG">255</span></div>
+      <div class="slider-row"><label style="color:#2563eb">B</label><input type="range" id="sB" min="10" max="100" value="100"><span class="val" id="vB">255</span></div>
+      <h3 style="margin-top:14px">dot 当前颜色</h3>
+      <pre id="out"></pre>
+      <div class="sw" id="sw" style="width:100%;height:34px;border-radius:8px"></div>
+      <p class="hint" id="note">等比挤压 = 压暗；单轴挤压 = 偏色</p>
+    </div>
+  </div>
+  <script>
+  (() => {
+    const cv = document.getElementById('cv');
+    const ctx = cv.getContext('2d');
+    const out = document.getElementById('out');
+    const sw = document.getElementById('sw');
+    const note = document.getElementById('note');
+    const sR = document.getElementById('sR'), sG = document.getElementById('sG'), sB = document.getElementById('sB');
+    const vR = document.getElementById('vR'), vG = document.getElementById('vG'), vB = document.getElementById('vB');
+    const W = 620, H = 470;
+
+    const SCALE = 126;
+    const CX0 = 0.225 * SCALE;
+    const C = { x: W / 2, y: 244 };
+    function proj(p) {
+      return {
+        x: C.x + ((p[0] - p[1]) * 0.9 + p[2] * 0.45) * SCALE - CX0,
+        y: C.y + ((p[0] + p[1]) * 0.45 - p[2] * 0.9) * SCALE,
+      };
+    }
+
+    // dot 位置（固定 70% / 40% / 85%）
+    const DOT = [0.7, 0.4, 0.85];
+
+    function draw() {
+      const ex = +sR.value / 100, ey = +sG.value / 100, ez = +sB.value / 100;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#fcfcfd';
+      ctx.fillRect(0, 0, W, H);
+
+      // 参考立方体（全范围，浅灰虚线）
+      const FULL = { O: [0,0,0], W: [1,1,1], R: [1,0,0], G: [0,1,0], B: [0,0,1], Y: [1,1,0], C: [0,1,1], M: [1,0,1] };
+      const FEDGES = [['O','R'],['O','G'],['O','B'],['R','Y'],['R','M'],['G','Y'],['G','C'],['B','C'],['B','M'],['W','Y'],['W','C'],['W','M']];
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(148,163,184,.5)';
+      ctx.lineWidth = 1;
+      for (const [a, b] of FEDGES) {
+        const pa = proj(FULL[a]), pb = proj(FULL[b]);
+        ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+      }
+      ctx.restore();
+
+      // 子盒（当前轴长）
+      const V = {
+        O: [0,0,0], W: [ex,ey,ez], R: [ex,0,0], G: [0,ey,0], B: [0,0,ez],
+        Y: [ex,ey,0], C: [0,ey,ez], M: [ex,0,ez],
+      };
+      const NAME = { O: '黑', W: '局部白', R: 'Rmax', G: 'Gmax', B: 'Bmax', Y: 'Y', C: 'C', M: 'M' };
+      // 子盒面渐变：端点颜色 = 子盒顶点实际色（随挤压变暗/偏移，与 color-is-box 一致）
+      faceGrad([V.R, V.Y, V.W, V.M]);
+      faceGrad([V.G, V.Y, V.W, V.C]);
+      faceGrad([V.B, V.M, V.W, V.C]);
+      // 棱线
+      ctx.strokeStyle = 'rgba(15,23,42,.5)';
+      ctx.lineWidth = 1.6;
+      for (const [a, b] of FEDGES) {
+        const pa = proj(V[a]), pb = proj(V[b]);
+        ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+      }
+      // 顶点
+      for (const [k, p] of Object.entries(V)) {
+        const q = proj(p);
+        ctx.beginPath(); ctx.arc(q.x, q.y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = k === 'W' ? '#cbd5e1' : k === 'O' ? '#111' : '#fff';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+      // W 顶点标注
+      const qw = proj(V.W);
+      ctx.font = '11px sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'left';
+      ctx.fillText('局部白 (' + Math.round(ex * 255) + ',' + Math.round(ey * 255) + ',' + Math.round(ez * 255) + ')', qw.x + 8, qw.y - 8);
+
+      // dot（与 color-is-box 一致：比例固定，挤压小于其比例时被 clamp 到子盒边缘 → 颜色改变）
+      const dc = [Math.min(DOT[0], ex), Math.min(DOT[1], ey), Math.min(DOT[2], ez)];
+      const drgb = [Math.round(dc[0] * 255), Math.round(dc[1] * 255), Math.round(dc[2] * 255)];
+      const qd = proj(dc);
+      ctx.beginPath(); ctx.arc(qd.x, qd.y, 8, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.beginPath(); ctx.arc(qd.x, qd.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgb(' + drgb.join(',') + ')'; ctx.fill();
+
+      // 轴标签
+      const pr = proj([ex, 0, 0]), pg = proj([0, ey, 0]), pb = proj([0, 0, ez]);
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#dc2626'; ctx.fillText('R', pr.x + 14, pr.y + 8);
+      ctx.fillStyle = '#16a34a'; ctx.fillText('G', pg.x - 14, pg.y + 8);
+      ctx.fillStyle = '#2563eb'; ctx.fillText('B', pb.x + 14, pb.y - 8);
+
+      // 信息
+      vR.textContent = Math.round(ex * 255);
+      vG.textContent = Math.round(ey * 255);
+      vB.textContent = Math.round(ez * 255);
+      const vol = (ex * ey * ez * 100).toFixed(1);
+      out.textContent = 'dot:   rgb(' + drgb.join(', ') + ')\n子盒体积: ' + vol + '% of 全空间\n白点:  rgb(' + Math.round(ex * 255) + ', ' + Math.round(ey * 255) + ', ' + Math.round(ez * 255) + ')';
+      sw.style.background = 'rgb(' + drgb.join(',') + ')';
+      if (ex === ey && ey === ez) note.textContent = ex < 1 ? '等比挤压 → 整体压暗（白点变灰）' : '全范围';
+      else if (ex < ey && ex < ez) note.textContent = 'R 轴最弱 → 颜色向青偏';
+      else if (ey < ex && ey < ez) note.textContent = 'G 轴最弱 → 颜色向品红偏';
+      else if (ez < ex && ez < ey) note.textContent = 'B 轴最弱 → 颜色向黄偏';
+      else note.textContent = '混合挤压 → 色域收窄 + 偏色';
+    }
+
+    function rgbv(v) { return 'rgb(' + Math.round(v[0] * 255) + ',' + Math.round(v[1] * 255) + ',' + Math.round(v[2] * 255) + ')'; }
+    function faceGrad(pts) {
+      const p = pts.map(proj);
+      const g = ctx.createLinearGradient(p[0].x, p[0].y, p[2].x, p[2].y);
+      g.addColorStop(0, rgbv(pts[0]));
+      g.addColorStop(1, rgbv(pts[2]));
+      ctx.beginPath();
+      ctx.moveTo(p[0].x, p[0].y);
+      ctx.lineTo(p[1].x, p[1].y);
+      ctx.lineTo(p[2].x, p[2].y);
+      ctx.lineTo(p[3].x, p[3].y);
+      ctx.closePath();
+      ctx.fillStyle = g;
+      ctx.globalAlpha = 0.5;
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+
+    for (const el of [sR, sG, sB]) el.addEventListener('input', draw);
+    draw();
+  })();
+  </script>
+</body>
+</html>

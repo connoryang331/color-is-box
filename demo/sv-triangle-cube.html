@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SV 三角形斜截面 — RGB 立方体可视化</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f4f6; margin: 0; padding: 36px 20px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #374151; }
+  .sub { margin: 0; font-size: 13px; color: #6b7280; max-width: 760px; text-align: center; line-height: 1.7; }
+  .row { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px 20px; box-shadow: 0 6px 20px rgba(0,0,0,.07); }
+  h3 { margin: 0 0 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; }
+  pre { font: 13px/1.8 ui-monospace, monospace; color: #111827; margin: 0; }
+  .hint { font-size: 12px; color: #9ca3af; line-height: 1.8; }
+  canvas#cv { display: block; border-radius: 12px; background: #fff; border: 1px solid #e5e7eb; touch-action: none; }
+  .huebar { -webkit-appearance: none; appearance: none; width: 100%; height: 14px; border-radius: 7px; margin-top: 12px; outline: none; cursor: pointer;
+    background: linear-gradient(90deg, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000); }
+  .huebar::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%; background: #fff; border: 2px solid #333; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+  .huebar::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 2px solid #333; }
+  .sw { display: inline-block; width: 13px; height: 13px; border-radius: 4px; border: 1px solid rgba(0,0,0,.15); vertical-align: -2px; margin-right: 5px; }
+</style>
+</head>
+<body>
+  <h1>SV Triangle in RGB Cube</h1>
+  <p class="sub">固定色相 h 时，该色相的所有颜色 = <b>纯色(h) · 白 · 黑</b> 三个点张成的三角形（斜截面）。拖动彩虹条转色相，三角形绕灰轴（白↔黑体对角线）旋转；整个立方体就是三角形旋转 360° 扫出的体积。</p>
+  <div class="row">
+    <div class="panel">
+      <canvas id="cv" width="620" height="500"></canvas>
+      <input type="range" id="hue" min="0" max="360" value="210" class="huebar" aria-label="色相">
+    </div>
+    <div class="panel">
+      <h3>当前色相</h3>
+      <pre id="out"></pre>
+      <p class="hint">三角形三顶点：<br><span class="sw" id="swc"></span>纯色(h, S=1, V=1)<br><span class="sw" style="background:#fff"></span>白 (1, 1, 1)<br><span class="sw" style="background:#000"></span>黑 (0, 0, 0)<br>三条边 = 饱和度 / 明度 / 灰轴</p>
+      <h3 style="margin-top:16px">立方体顶点</h3>
+      <p class="hint">6 纯色 + 白 + 黑 = 8 顶点<br>红黄绿青蓝品红 → 色相 0/60/120/180/240/300°</p>
+    </div>
+  </div>
+  <script>
+  (() => {
+    const cv = document.getElementById('cv');
+    const ctx = cv.getContext('2d');
+    const out = document.getElementById('out');
+    const swc = document.getElementById('swc');
+    const hueEl = document.getElementById('hue');
+    const W = 620, H = 500;
+
+    // 斜平行投影：R→右下、G→左下、B→右上偏（灰轴在屏幕上展开为水平线，黑白两点分离，SV 三角形可见）
+    const SCALE = 132;
+    const CX0 = 0.225 * SCALE; // 投影中心偏移（8 顶点包围盒中心）
+    const C = { x: W / 2, y: 258 };
+    function proj(p) {
+      return {
+        x: C.x + ((p[0] - p[1]) * 0.9 + p[2] * 0.45) * SCALE - CX0,
+        y: C.y + ((p[0] + p[1]) * 0.45 - p[2] * 0.9) * SCALE,
+      };
+    }
+
+    const V = {
+      O: [0, 0, 0], W: [1, 1, 1], R: [1, 0, 0], G: [0, 1, 0], B: [0, 0, 1],
+      Y: [1, 1, 0], C: [0, 1, 1], M: [1, 0, 1],
+    };
+    const NAME = { O: '黑', W: '白', R: '红', G: '绿', B: '蓝', Y: '黄', C: '青', M: '品红' };
+    const EDGES = [
+      ['O', 'R'], ['O', 'G'], ['O', 'B'],
+      ['R', 'Y'], ['R', 'M'], ['G', 'Y'], ['G', 'C'], ['B', 'C'], ['B', 'M'],
+      ['W', 'Y'], ['W', 'C'], ['W', 'M'],
+    ];
+    const PURE = { R: '#ff0000', Y: '#ffff00', G: '#00cc00', C: '#00ffff', B: '#0000ff', M: '#ff00ff' };
+
+    function hue2rgb(h) {
+      const s = 1, l = 0.5;
+      const c = (1 - Math.abs(2 * l - 1)) * s;
+      const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+      const m = l - c / 2;
+      let r = 0, g = 0, b = 0;
+      if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; }
+      else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; }
+      else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+      return [r + m, g + m, b + m];
+    }
+
+    function draw() {
+      const h = +hueEl.value;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#fcfcfd';
+      ctx.fillRect(0, 0, W, H);
+
+      // 棱线
+      ctx.strokeStyle = 'rgba(30,41,59,.28)';
+      ctx.lineWidth = 1.2;
+      for (const [a, b] of EDGES) {
+        const pa = proj(V[a]), pb = proj(V[b]);
+        ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+      }
+
+      // 灰轴（白↔黑体对角线，虚线）
+      const po = proj(V.O), pw = proj(V.W);
+      ctx.save();
+      ctx.setLineDash([6, 5]);
+      ctx.strokeStyle = 'rgba(107,114,128,.75)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath(); ctx.moveTo(po.x, po.y); ctx.lineTo(pw.x, pw.y); ctx.stroke();
+      ctx.restore();
+
+      // SV 三角形（纯色 · 白 · 黑）
+      const pure = hue2rgb(h);
+      const pPure = proj(pure);
+      const tri = [pPure, pw, po];
+      ctx.beginPath();
+      ctx.moveTo(tri[0].x, tri[0].y);
+      ctx.lineTo(tri[1].x, tri[1].y);
+      ctx.lineTo(tri[2].x, tri[2].y);
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(59,130,246,.14)';
+      ctx.fill();
+      ctx.strokeStyle = '#2563eb';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // 顶点圆点 + 标签
+      const labels = [
+        { p: pPure, t: '纯色', sub: 'h=' + h.toFixed(0) + '°, S=1, V=1', c: '#' + pure.map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('') },
+        { p: pw, t: '白', sub: '(1,1,1)', c: '#ffffff' },
+        { p: po, t: '黑', sub: '(0,0,0)', c: '#000000' },
+      ];
+      for (const L of labels) {
+        ctx.beginPath(); ctx.arc(L.p.x, L.p.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.beginPath(); ctx.arc(L.p.x, L.p.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = L.c; ctx.fill();
+        // 标签文字：外偏移
+        const dx = L.p.x > C.x ? 14 : -14;
+        const dy = L.p.y < C.y ? -10 : 14;
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = dx > 0 ? 'left' : 'right';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#111827';
+        ctx.fillText(L.t, L.p.x + dx, L.p.y + dy);
+        ctx.font = '10px monospace';
+        ctx.fillStyle = '#6b7280';
+        ctx.fillText(L.sub, L.p.x + dx, L.p.y + dy + 13);
+      }
+
+      // 立方体顶点小圆点（纯色/黑白）
+      for (const [k, rgb] of Object.entries(V)) {
+        const p = proj(rgb);
+        ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+        ctx.fillStyle = PURE[k] || (k === 'W' ? '#ffffff' : '#111111');
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.35)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // 轴标签
+      const pr = proj([1, 0, 0]), pg = proj([0, 1, 0]), pb = proj([0, 0, 1]);
+      ctx.font = 'bold 13px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#dc2626'; ctx.fillText('R', pr.x + 16, pr.y + 6);
+      ctx.fillStyle = '#16a34a'; ctx.fillText('G', pg.x - 16, pg.y + 6);
+      ctx.fillStyle = '#2563eb'; ctx.fillText('B', pb.x + 16, pb.y - 10);
+
+      // 信息
+      const hex = '#' + pure.map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('');
+      out.textContent = 'hue:   ' + h.toFixed(0) + ' deg\n纯色:  ' + hex + '\n白:    #ffffff\n黑:    #000000';
+      swc.style.background = hex;
+    }
+
+    hueEl.addEventListener('input', draw);
+    draw();
+  })();
+  </script>
+</body>
+</html>

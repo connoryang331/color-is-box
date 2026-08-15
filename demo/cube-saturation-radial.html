@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>径向饱和度 — 灰轴视角演示</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f4f6; margin: 0; padding: 36px 20px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #374151; }
+  .sub { margin: 0; font-size: 13px; color: #6b7280; max-width: 780px; text-align: center; line-height: 1.7; }
+  .row { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px 20px; box-shadow: 0 6px 20px rgba(0,0,0,.07); }
+  h3 { margin: 0 0 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; }
+  pre { font: 13px/1.8 ui-monospace, monospace; color: #111827; margin: 0; }
+  .hint { font-size: 12px; color: #9ca3af; line-height: 1.8; }
+  canvas#cv { display: block; border-radius: 12px; background: #fff; border: 1px solid #e5e7eb; touch-action: none; cursor: crosshair; }
+  .sw { display: inline-block; width: 100%; height: 34px; border-radius: 8px; border: 1px solid rgba(0,0,0,.12); margin-top: 8px; }
+</style>
+</head>
+<body>
+  <h1>Radial Saturation · 灰轴视角</h1>
+  <p class="sub">当前视角 = 从灰轴顶端看立方体（黑白重叠于中心，轮廓为正六边形）。**投影径向距离 ∝ 到灰轴距离 = 饱和度**。拖动 dot：径向 = 饱和度，角度 = 色相（V 固定 100%）。虚线圆 = 饱和度 25/50/75% 参考线。</p>
+  <div class="row">
+    <div class="panel">
+      <canvas id="cv" width="600" height="520"></canvas>
+    </div>
+    <div class="panel">
+      <h3>当前 dot</h3>
+      <pre id="out"></pre>
+      <div class="sw" id="sw"></div>
+      <p class="hint">拖动：径向 = 饱和度（中心 0% → 边缘 100%）<br>角度 = 色相（12 点 = 0°）<br>六个顶点 = 红黄绿青蓝品红</p>
+      <h3 style="margin-top:16px">映射验证</h3>
+      <p class="hint">投影距离² = r²+g²+b²−rg−rb−gb<br>到灰轴距离² = (2/3) × 投影距离²<br>→ 径向距离与饱和度线性相关</p>
+    </div>
+  </div>
+  <script>
+  (() => {
+    const cv = document.getElementById('cv');
+    const ctx = cv.getContext('2d');
+    const out = document.getElementById('out');
+    const sw = document.getElementById('sw');
+    const W = 600, H = 520;
+
+    const COS30 = Math.cos(Math.PI / 6);
+    const SIN30 = Math.sin(Math.PI / 6);
+    const SCALE = 148;
+    const C = { x: W / 2, y: H / 2 };
+    function proj(p) {
+      return { x: C.x + (p[1] - p[0]) * COS30 * SCALE, y: C.y + p[2] * SCALE - (p[0] + p[1]) * SIN30 * SCALE };
+    }
+
+    // 六顶点（投影边缘）
+    const HEX = [
+      [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 1, 1], [0, 0, 1], [1, 0, 1],
+    ];
+    const HEX_NAME = ['红', '黄', '绿', '青', '蓝', '品红'];
+    const HEX_COL = ['#ff0000', '#ffdd00', '#00cc44', '#00ddcc', '#0044ff', '#ff00aa'];
+    const EDGE_R = Math.hypot(proj(HEX[0]).x - C.x, proj(HEX[0]).y - C.y);
+
+    // dot 极坐标（角度 0 = 12 点方向，顺时针；饱和度 0-1）
+    let sat = 0.55, hueDeg = 210;
+    let dragging = false;
+
+    function hsv2rgb(h, s, v) {
+      const c = v * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = v - c;
+      let r = 0, g = 0, b = 0;
+      if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; }
+      else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; }
+      else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+      return [Math.round((r + m) * 255), Math.round((g + m) * 255), Math.round((b + m) * 255)];
+    }
+
+    function dotPos() {
+      const a = hueDeg * Math.PI * 2 / 360;
+      const r = sat * EDGE_R;
+      return { x: C.x + r * Math.sin(a), y: C.y - r * Math.cos(a) };
+    }
+    function posOfPoint(p) {
+      const dx = p.x - C.x, dy = p.y - C.y;
+      let a = Math.atan2(dx, -dy);
+      if (a < 0) a += Math.PI * 2;
+      return { sat: Math.min(1, Math.hypot(dx, dy) / EDGE_R), hue: a * 360 / (Math.PI * 2) };
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#fcfcfd';
+      ctx.fillRect(0, 0, W, H);
+
+      // 六边形外轮廓
+      const pts = HEX.map(proj);
+      ctx.beginPath();
+      pts.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(30,41,59,.4)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // 内部棱线（从中心到各顶点 + 相邻）
+      const center = proj([0.5, 0.5, 0.5]);
+      ctx.strokeStyle = 'rgba(30,41,59,.12)';
+      ctx.lineWidth = 1;
+      for (const p of pts) {
+        ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(30,41,59,.22)';
+      for (let i = 0; i < 6; i++) {
+        const j = (i + 1) % 6;
+        if (i % 2 === 0) { // 相邻纯色间有棱（黄绿、青蓝、品红红）
+          ctx.beginPath(); ctx.moveTo(pts[i].x, pts[i].y); ctx.lineTo(pts[j].x, pts[j].y); ctx.stroke();
+        }
+      }
+
+      // 饱和度参考圆（25/50/75%）
+      ctx.save();
+      ctx.setLineDash([3, 5]);
+      for (const t of [0.25, 0.5, 0.75]) {
+        ctx.beginPath();
+        ctx.arc(C.x, C.y, EDGE_R * t, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(100,116,139,.4)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.font = '10px monospace';
+        ctx.fillStyle = 'rgba(100,116,139,.7)';
+        ctx.fillText(Math.round(t * 100) + '%', C.x + EDGE_R * t + 4, C.y - 4);
+      }
+      ctx.restore();
+
+      // 顶点
+      for (let i = 0; i < 6; i++) {
+        ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = HEX_COL[i]; ctx.fill();
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#475569';
+        const dx = pts[i].x > C.x ? 12 : -12;
+        const dy = pts[i].y < C.y ? -8 : 16;
+        ctx.fillText(HEX_NAME[i], pts[i].x + dx, pts[i].y + dy);
+      }
+
+      // 中心（灰轴）标记
+      ctx.beginPath(); ctx.arc(center.x, center.y, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#111';
+      ctx.fill();
+
+      // dot
+      const d = dotPos();
+      const rgb = hsv2rgb(hueDeg, sat, 1);
+      ctx.beginPath(); ctx.arc(d.x, d.y, 9, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.3)'; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(d.x, d.y, 6.5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgb(' + rgb.join(',') + ')'; ctx.fill();
+      // 径向连线（dot → 中心）
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(37,99,235,.5)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(center.x, center.y); ctx.lineTo(d.x, d.y); ctx.stroke();
+      ctx.restore();
+
+      // 信息
+      const hex = '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('');
+      out.textContent = '饱和度: ' + Math.round(sat * 100) + '%   (径向)\n色相:   ' + Math.round(hueDeg) + ' deg (角度)\nRGB:    ' + rgb.join(', ') + '\nHEX:    ' + hex;
+      sw.style.background = hex;
+    }
+
+    function pos(e) {
+      const r = cv.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+
+    cv.addEventListener('pointerdown', (e) => {
+      const p = pos(e);
+      const dd = Math.hypot(p.x - dotPos().x, p.y - dotPos().y);
+      if (dd <= 16 || Math.hypot(p.x - C.x, p.y - C.y) <= EDGE_R + 6) {
+        dragging = true;
+        const pp = posOfPoint(p);
+        sat = pp.sat; hueDeg = pp.hue;
+        draw();
+      }
+    });
+    cv.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const pp = posOfPoint(pos(e));
+      sat = pp.sat; hueDeg = pp.hue;
+      draw();
+    });
+    const end = () => { dragging = false; };
+    cv.addEventListener('pointerup', end);
+    cv.addEventListener('pointercancel', end);
+    cv.addEventListener('pointerleave', end);
+
+    draw();
+  })();
+  </script>
+</body>
+</html>

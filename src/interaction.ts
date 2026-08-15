@@ -7,6 +7,8 @@ import {
   FACES,
   ALPHA_R_OUT,
   ALPHA_R_IN,
+  setViewRotation,
+  getViewRotation,
   type RenderState,
   DEFAULT_RENDER_STATE,
 } from './box-renderer';
@@ -27,6 +29,9 @@ export function createInteraction(
   onAlphaChange: (a: number) => void,
   getAlpha: () => number,
   getDotScreenPos: () => Vec2,
+  /** 旋转立方体（旋钮调饱和度） */
+  onSatChange: (s: number) => void,
+  getSat: () => number,
 ) {
   const state: RenderState = { ...DEFAULT_RENDER_STATE };
 
@@ -39,6 +44,8 @@ export function createInteraction(
   let alphaDragging = false;
   let mouseDownActive = false; // 按住不松手：长按弹环后可直接移入环带操作
   let touchActive = false;
+  let viewDragging = false; // 旋转立方体（旋钮调饱和度）
+  let viewLastPt: Vec2 | null = null;
   const DOT_HIT_R = 9;
   const LONG_PRESS_MS = 1000; // 按压 1 秒进入 alpha 模式（双击反转不受影响：快速 up 即取消）
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
@@ -319,6 +326,18 @@ export function createInteraction(
     if (faceHit) {
       e.preventDefault();
       startFaceDrag(faceHit.faceIndex, faceHit.s, faceHit.t, e.shiftKey);
+      return;
+    }
+
+    // 六边形外区域：旋转立方体（拧动调饱和度）
+    const c = getCenter();
+    if (Math.hypot(pt.x - c.x, pt.y - c.y) > getScale() + 20) {
+      e.preventDefault();
+      viewDragging = true;
+      viewLastPt = pt;
+      state.viewRotating = true;
+      state.ringAlpha = Math.min(1, state.ringAlpha + 0.25);
+      requestRender();
     }
   }
 
@@ -328,6 +347,23 @@ export function createInteraction(
     if (alphaDragging) {
       e.preventDefault();
       applyAlphaFromPoint(pt);
+      return;
+    }
+
+    // 旋转立方体：拧动 → 视角慢转 + 饱和度变化
+    if (viewDragging && viewLastPt) {
+      e.preventDefault();
+      const dx = pt.x - viewLastPt.x;
+      const dy = pt.y - viewLastPt.y;
+      const v = getViewRotation();
+      setViewRotation(
+        Math.max(-60, Math.min(60, v.yaw + dx * 0.12)),
+        Math.max(-60, Math.min(60, v.pitch + dy * 0.12)),
+      );
+      if (dx !== 0) onSatChange(Math.max(0, Math.min(1, getSat() + dx * 0.002)));
+      state.ringAlpha = Math.min(1, state.ringAlpha + 0.12);
+      viewLastPt = pt;
+      requestRender();
       return;
     }
 
@@ -369,6 +405,14 @@ export function createInteraction(
     cancelLongPress();
     mouseDownActive = false;
     alphaDragging = false;
+    if (viewDragging) {
+      viewDragging = false;
+      state.viewRotating = false;
+      const v = getViewRotation();
+      if (Math.max(Math.abs(v.yaw), Math.abs(v.pitch)) > 5) state.ringAlpha = 0;
+      viewLastPt = null;
+      requestRender();
+    }
     const wasDragging = dragAxis >= 0 || dragFace >= 0;
     endAxisDrag();
     endFaceDrag();
@@ -400,7 +444,16 @@ export function createInteraction(
     if (axisHit >= 0) { e.preventDefault(); startAxisDrag(axisHit, pt); return; }
 
     const faceHit = hitTestFace(pt);
-    if (faceHit) { e.preventDefault(); startFaceDrag(faceHit.faceIndex, faceHit.s, faceHit.t, false); }
+    if (faceHit) { e.preventDefault(); startFaceDrag(faceHit.faceIndex, faceHit.s, faceHit.t, false); return; }
+    const c = getCenter();
+    if (Math.hypot(pt.x - c.x, pt.y - c.y) > getScale() + 20) {
+      e.preventDefault();
+      viewDragging = true;
+      viewLastPt = pt;
+      state.viewRotating = true;
+      state.ringAlpha = Math.min(1, state.ringAlpha + 0.25);
+      requestRender();
+    }
   }
 
   function onTouchMove(e: TouchEvent): void {
@@ -409,6 +462,17 @@ export function createInteraction(
     if (alphaDragging) { e.preventDefault(); applyAlphaFromPoint(pt); }
     else if (touchActive && state.alphaMode && inAlphaRing(pt)) { e.preventDefault(); alphaDragging = true; applyAlphaFromPoint(pt); }
     else if (dragAxis >= 0) { e.preventDefault(); applyAxisDrag(pt); }
+    else if (viewDragging && viewLastPt) {
+      e.preventDefault();
+      const dx = pt.x - viewLastPt.x;
+      const dy = pt.y - viewLastPt.y;
+      const v = getViewRotation();
+      setViewRotation(Math.max(-60, Math.min(60, v.yaw + dx * 0.12)), Math.max(-60, Math.min(60, v.pitch + dy * 0.12)));
+      if (dx !== 0) onSatChange(Math.max(0, Math.min(1, getSat() + dx * 0.002)));
+      state.ringAlpha = Math.min(1, state.ringAlpha + 0.12);
+      viewLastPt = pt;
+      requestRender();
+    }
     else if (dragFace >= 0) { e.preventDefault(); applyFaceDrag(pt, false, false); }
   }
 
@@ -416,6 +480,14 @@ export function createInteraction(
     cancelLongPress();
     touchActive = false;
     alphaDragging = false;
+    if (viewDragging) {
+      viewDragging = false;
+      state.viewRotating = false;
+      const v = getViewRotation();
+      if (Math.max(Math.abs(v.yaw), Math.abs(v.pitch)) > 5) state.ringAlpha = 0;
+      viewLastPt = null;
+      requestRender();
+    }
     endAxisDrag();
     endFaceDrag();
     requestRender();

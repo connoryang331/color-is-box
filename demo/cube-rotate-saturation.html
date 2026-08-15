@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>旋转立方体 — 环形饱和度</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f4f6; margin: 0; padding: 36px 20px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #374151; }
+  .sub { margin: 0; font-size: 13px; color: #6b7280; max-width: 800px; text-align: center; line-height: 1.7; }
+  .row { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px 20px; box-shadow: 0 6px 20px rgba(0,0,0,.07); }
+  h3 { margin: 0 0 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; }
+  pre { font: 13px/1.8 ui-monospace, monospace; color: #111827; margin: 0; }
+  .hint { font-size: 12px; color: #9ca3af; line-height: 1.8; }
+  canvas#cv { display: block; border-radius: 12px; background: #fff; border: 1px solid #e5e7eb; touch-action: none; cursor: grab; }
+  .sw { display: block; width: 100%; height: 34px; border-radius: 8px; border: 1px solid rgba(0,0,0,.12); margin-top: 8px; }
+  button { font: 600 12px sans-serif; border: 1px solid #d0d7de; background: #fff; color: #374151; border-radius: 7px; padding: 6px 14px; cursor: pointer; margin-top: 10px; }
+  button:hover { background: #f6f8fa; }
+</style>
+</head>
+<body>
+  <h1>Rotate → Ring Saturation</h1>
+  <p class="sub"><b>向右拧动立方体（拖空白旋转）→ 饱和度上升；向左拧 → 下降</b>。旋转时浮现<b>环形饱和度盘</b>（内圈灰 = 0%，外圈纯色 = 100%），也可直接在环上拖动选值。松手后若视角回正，环与雷达网格保持显示。</p>
+  <div class="row">
+    <div class="panel">
+      <canvas id="cv" width="640" height="540"></canvas>
+      <button id="reset">回正视角</button>
+    </div>
+    <div class="panel">
+      <h3>当前颜色</h3>
+      <pre id="out"></pre>
+      <div class="sw" id="sw"></div>
+      <p class="hint">拧：拖空白旋转（慢速）<br>环：径向位置 = 饱和度<br>dot：六边形内 角度 = 色相<br>六顶点 = 黄绿青蓝品红红</p>
+    </div>
+  </div>
+  <script>
+  (() => {
+    const cv = document.getElementById('cv');
+    const ctx = cv.getContext('2d');
+    const out = document.getElementById('out');
+    const sw = document.getElementById('sw');
+    const W = 640, H = 540;
+
+    const COS30 = Math.cos(Math.PI / 6);
+    const SIN30 = Math.sin(Math.PI / 6);
+    const SCALE = 138;
+    const C = { x: W / 2, y: H / 2 - 6 };
+
+    let yaw = 0, pitch = 0;          // 视角（0,0 = 灰轴正对）
+    let sat = 0.55, hueDeg = 210;    // dot
+    let rotating = false, lastPt = null;
+    let ringAlpha = 0;               // 饱和度环浮现程度（旋转中 → 1）
+
+    function rot(p) {
+      const v = [p[0] - 0.5, p[1] - 0.5, p[2] - 0.5];
+      const cy = Math.cos(yaw), sy = Math.sin(yaw);
+      const cx = Math.cos(pitch), sx = Math.sin(pitch);
+      const x = v[0] * cy + v[2] * sy;
+      const y = v[1];
+      const z = -v[0] * sy + v[2] * cy;
+      const y2 = y * cx - z * sx;
+      const z2 = y * sx + z * cx;
+      return [x + 0.5, y2 + 0.5, z2 + 0.5];
+    }
+    function proj(p) {
+      const q = rot(p);
+      return { x: C.x + (q[1] - q[0]) * COS30 * SCALE, y: C.y + q[2] * SCALE - (q[0] + q[1]) * SIN30 * SCALE };
+    }
+    function gridAlpha() {
+      const a = Math.max(Math.abs(yaw), Math.abs(pitch));
+      return Math.max(0, Math.min(1, 1 - a / 10));
+    }
+
+    const HEX = [
+      [1, 0, 0], [1, 1, 0], [0, 1, 0], [0, 1, 1], [0, 0, 1], [1, 0, 1],
+    ];
+    const HEX_NAME = ['红', '黄', '绿', '青', '蓝', '品红'];
+    const HEX_COL = ['#ff1744', '#ffeb3b', '#00e676', '#00bcd4', '#2962ff', '#f50057'];
+    const EDGE = proj([1, 0, 0]);
+    const EDGE_R = Math.hypot(EDGE.x - C.x, EDGE.y - C.y);
+    const APOTHEM = EDGE_R * COS30;
+    const RING_IN = 46, RING_OUT = 66; // 饱和度环内外半径
+
+    function edgeRadiusAt(thetaDeg) {
+      const delta = Math.abs((thetaDeg % 60 + 60) % 60 - 30);
+      return APOTHEM / Math.cos(delta * Math.PI / 180);
+    }
+    function hsv2rgb01(h, s, v) {
+      const c = v * s, x = c * (1 - Math.abs(((h / 60) % 2) - 1)), m = v - c;
+      let r = 0, g = 0, b = 0;
+      if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; }
+      else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; }
+      else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+      return [r + m, g + m, b + m];
+    }
+    const dotRgb01 = () => hsv2rgb01(hueDeg, sat, 1);
+
+    function draw() {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#fcfcfd';
+      ctx.fillRect(0, 0, W, H);
+      const ga = gridAlpha();
+      const rgb01 = dotRgb01();
+
+      // 立方体面
+      const V = { O: [0,0,0], W: [1,1,1], R: [1,0,0], G: [0,1,0], B: [0,0,1], Y: [1,1,0], C: [0,1,1], M: [1,0,1] };
+      const FACES = [
+        [V.R, V.Y, V.W, V.M, 'rgba(255,23,68,'],
+        [V.G, V.Y, V.W, V.C, 'rgba(0,230,118,'],
+        [V.B, V.M, V.W, V.C, 'rgba(41,98,255,'],
+      ];
+      for (const f of FACES) {
+        const pts = f.slice(0, 4).map(proj);
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < 4; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath();
+        ctx.fillStyle = f[4] + (0.10 * ga + 0.04) + ')';
+        ctx.fill();
+      }
+      const EDGES = [['O','R'],['O','G'],['O','B'],['R','Y'],['R','M'],['G','Y'],['G','C'],['B','C'],['B','M'],['W','Y'],['W','C'],['W','M']];
+      ctx.strokeStyle = 'rgba(30,41,59,.45)';
+      ctx.lineWidth = 1.4;
+      for (const [a, b] of EDGES) {
+        const pa = proj(V[a]), pb = proj(V[b]);
+        ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.stroke();
+      }
+      const po = proj(V.O), pw = proj(V.W);
+      ctx.save();
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = 'rgba(100,116,139,.7)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(po.x, po.y); ctx.lineTo(pw.x, pw.y); ctx.stroke();
+      ctx.restore();
+
+      // 顶点
+      for (let i = 0; i < 6; i++) {
+        const p = proj(HEX[i]);
+        ctx.beginPath(); ctx.arc(p.x, p.y, 4.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.4)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = HEX_COL[i]; ctx.fill();
+      }
+
+      // 雷达网格（灰轴视角）
+      if (ga > 0.02) {
+        ctx.save();
+        ctx.globalAlpha = ga;
+        for (const t of [0.25, 0.5, 0.75, 1]) {
+          ctx.setLineDash(t === 1 ? [] : [3, 5]);
+          ctx.strokeStyle = t === 1 ? 'rgba(30,41,59,.5)' : 'rgba(148,163,184,.55)';
+          ctx.lineWidth = t === 1 ? 1.4 : 1;
+          ctx.beginPath();
+          for (let i = 0; i <= 6; i++) {
+            const hx = HEX[i % 6];
+            const pp = proj([hx[0] * t, hx[1] * t, hx[2] * t]);
+            if (i === 0) ctx.moveTo(pp.x, pp.y); else ctx.lineTo(pp.x, pp.y);
+          }
+          ctx.closePath();
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(148,163,184,.4)';
+        ctx.lineWidth = 1;
+        for (const hx of HEX) {
+          const pp = proj(hx);
+          ctx.beginPath(); ctx.moveTo(C.x, C.y); ctx.lineTo(pp.x, pp.y); ctx.stroke();
+        }
+        ctx.font = '10px monospace';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'left';
+        for (const t of [0.25, 0.5, 0.75]) {
+          const pp = proj([t, t, 0]);
+          ctx.fillText(Math.round(t * 100) + '%', pp.x + 5, pp.y - 4);
+        }
+        ctx.font = '12px sans-serif';
+        ctx.fillStyle = '#334155';
+        ctx.textAlign = 'center';
+        for (let i = 0; i < 6; i++) {
+          const p = proj(HEX[i]);
+          const dx = p.x > C.x + 10 ? 14 : p.x < C.x - 10 ? -14 : 0;
+          const dy = p.y < C.y - 10 ? -10 : 14;
+          ctx.fillText(HEX_NAME[i], p.x + dx, p.y + dy);
+        }
+        ctx.beginPath(); ctx.arc(C.x, C.y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#111';
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // 环形饱和度盘（旋转时浮现）
+      if (ringAlpha > 0.02) {
+        ctx.save();
+        ctx.globalAlpha = ringAlpha;
+        // 环带：径向渐变（内灰 → 外当前色相纯色）
+        ctx.beginPath();
+        ctx.arc(C.x, C.y, RING_OUT, 0, Math.PI * 2);
+        ctx.arc(C.x, C.y, RING_IN, 0, Math.PI * 2, true);
+        ctx.clip();
+        const pure = hsv2rgb01(hueDeg, 1, 1).map(v => Math.round(v * 255));
+        const g = ctx.createRadialGradient(C.x, C.y, RING_IN, C.x, C.y, RING_OUT);
+        g.addColorStop(0, '#e7e7e7');
+        g.addColorStop(1, 'rgb(' + pure.join(',') + ')');
+        ctx.fillStyle = g;
+        ctx.fillRect(C.x - RING_OUT, C.y - RING_OUT, RING_OUT * 2, RING_OUT * 2);
+        ctx.restore();
+        // 环描边
+        ctx.beginPath();
+        ctx.arc(C.x, C.y, RING_OUT, 0, Math.PI * 2);
+        ctx.arc(C.x, C.y, RING_IN, 0, Math.PI * 2, true);
+        ctx.strokeStyle = 'rgba(15,23,42,.35)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+        // 25/50/75 刻度短线（12 点方向）
+        ctx.font = '10px monospace';
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'center';
+        for (const t of [0.25, 0.5, 0.75]) {
+          const rr = RING_IN + (RING_OUT - RING_IN) * t;
+          ctx.fillText(Math.round(t * 100) + '%', C.x + rr + 10, C.y - 4);
+        }
+        // 指针：顶部径向位置 = 饱和度
+        const pr = RING_IN + (RING_OUT - RING_IN) * sat;
+        ctx.beginPath();
+        ctx.arc(C.x, C.y - pr, 6.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(15,23,42,.55)';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+        // 指针径向连线
+        ctx.save();
+        ctx.setLineDash([3, 4]);
+        ctx.strokeStyle = 'rgba(100,116,139,.6)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(C.x, C.y - RING_IN);
+        ctx.lineTo(C.x, C.y - pr);
+        ctx.stroke();
+        ctx.restore();
+        ctx.restore();
+      }
+
+      // dot
+      const dotP = proj(rgb01);
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,.18)';
+      ctx.shadowBlur = 5;
+      ctx.beginPath(); ctx.arc(dotP.x, dotP.y, 9, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(15,23,42,.45)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(15,23,42,.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(dotP.x - 13, dotP.y); ctx.lineTo(dotP.x - 4, dotP.y);
+      ctx.moveTo(dotP.x + 4, dotP.y); ctx.lineTo(dotP.x + 13, dotP.y);
+      ctx.moveTo(dotP.x, dotP.y - 13); ctx.lineTo(dotP.x, dotP.y - 4);
+      ctx.moveTo(dotP.x, dotP.y + 4); ctx.lineTo(dotP.x, dotP.y + 13);
+      ctx.stroke();
+
+      // 信息
+      const rgb = rgb01.map(v => Math.round(v * 255));
+      const hex = '#' + rgb.map(v => v.toString(16).padStart(2, '0')).join('');
+      out.textContent = '饱和度: ' + Math.round(sat * 100) + '%\n色相:   ' + Math.round(hueDeg) + '°\nRGB:    ' + rgb.join(', ') + '\nHEX:    ' + hex + '\n视角:   yaw ' + Math.round(yaw) + '°  pitch ' + Math.round(pitch) + '°';
+      sw.style.background = hex;
+    }
+
+    function pos(e) {
+      const r = cv.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+    function posOfPoint(p) {
+      const dx = p.x - C.x, dy = p.y - C.y;
+      let a = Math.atan2(dx, -dy);
+      if (a < 0) a += Math.PI * 2;
+      const hue = a * 360 / (Math.PI * 2);
+      const d = Math.hypot(dx, dy);
+      return { sat: Math.min(1, d / edgeRadiusAt(hue)), hue };
+    }
+
+    cv.addEventListener('pointerdown', (e) => {
+      const p = pos(e);
+      const dC = Math.hypot(p.x - C.x, p.y - C.y);
+      // 饱和度环：径向位置 → 饱和度
+      if (ringAlpha > 0.4 && dC >= RING_IN - 6 && dC <= RING_OUT + 8) {
+        sat = Math.max(0, Math.min(1, (dC - RING_IN) / (RING_OUT - RING_IN)));
+        draw();
+        return;
+      }
+      // dot：灰轴视角下拖 dot = 色相/饱和度
+      const dotP = proj(dotRgb01());
+      if (Math.hypot(p.x - dotP.x, p.y - dotP.y) <= 15 && gridAlpha() > 0.4) {
+        const pp = posOfPoint(p);
+        sat = pp.sat; hueDeg = pp.hue;
+        draw();
+        return;
+      }
+      // 旋转立方体（慢速旋钮：横向位移 → 饱和度）
+      rotating = true;
+      lastPt = p;
+      cv.style.cursor = 'grabbing';
+    });
+    cv.addEventListener('pointermove', (e) => {
+      const p = pos(e);
+      if (rotating && lastPt) {
+        const dx = p.x - lastPt.x;
+        // 慢速旋转视角
+        yaw = Math.max(-60, Math.min(60, yaw + dx * 0.12));
+        pitch = Math.max(-60, Math.min(60, pitch + (p.y - lastPt.y) * 0.12));
+        // 拧动 → 饱和度（向右拧增，向左拧减）
+        sat = Math.max(0, Math.min(1, sat + dx * 0.002));
+        ringAlpha = Math.min(1, ringAlpha + 0.15); // 旋转时环浮现
+        lastPt = p;
+        draw();
+      }
+    });
+    const end = () => {
+      rotating = false;
+      lastPt = null;
+      cv.style.cursor = 'grab';
+      // 松手：回正则保持环，否则缓慢淡出
+      if (gridAlpha() < 0.5) ringAlpha = 0;
+      draw();
+    };
+    cv.addEventListener('pointerup', end);
+    cv.addEventListener('pointercancel', end);
+    cv.addEventListener('pointerleave', end);
+    document.getElementById('reset').addEventListener('click', () => { yaw = 0; pitch = 0; ringAlpha = 0; draw(); });
+
+    draw();
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SV 矩形 ↔ 立方体面 映射示意</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f4f6; margin: 0; padding: 32px 20px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #374151; }
+  .sub { margin: 0; font-size: 13px; color: #6b7280; max-width: 720px; text-align: center; line-height: 1.7; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 18px 22px; box-shadow: 0 6px 20px rgba(0,0,0,.07); }
+  table { border-collapse: collapse; font-size: 13px; color: #374151; }
+  th, td { border: 1px solid #e5e7eb; padding: 8px 14px; text-align: left; }
+  th { background: #f9fafb; font-weight: 600; }
+  .sw { display: inline-block; width: 14px; height: 14px; border-radius: 4px; border: 1px solid rgba(0,0,0,.15); vertical-align: middle; margin-right: 6px; }
+</style>
+</head>
+<body>
+  <h1>SV 矩形 ↔ 立方体面</h1>
+  <p class="sub">左边是 vanilla-colorful 的顶部 SV 矩形（四角 = 白 / 灰 / 黑 / 纯色）；右边是 3D 立方体的一个外露面（四角 = 两个纯色 + 黑 + 白）。它们是同一类"纯色+黑白"渐变面，立方体的面完全可见，不需要看内部截面。</p>
+  <div class="card">
+    <svg viewBox="0 0 900 420" width="900" style="max-width:100%; height:auto">
+      <defs>
+        <linearGradient id="svsat" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#2196f3"/>
+        </linearGradient>
+        <linearGradient id="svval" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#000"/>
+        </linearGradient>
+        <linearGradient id="svboth" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#2196f3"/>
+        </linearGradient>
+        <linearGradient id="faceTop" x1="0" y1="0" x2="1" y2="0" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#f00"/>
+        </linearGradient>
+        <linearGradient id="faceLeft" x1="0" y1="0" x2="0" y2="1" gradientUnits="userSpaceOnUse">
+          <stop offset="0" stop-color="#000"/><stop offset="1" stop-color="#0f0"/>
+        </linearGradient>
+      </defs>
+
+      <!-- 左：SV 矩形（用 svboth 近似：横向饱和度，纵向明度用覆盖层） -->
+      <text x="140" y="36" font-size="14" font-weight="700" fill="#333" text-anchor="middle">SV 矩形（vanilla 顶部）</text>
+      <g>
+        <rect x="40" y="50" width="200" height="200" fill="#fff"/>
+        <rect x="40" y="50" width="200" height="200" fill="url(#svsat)" opacity="1"/>
+        <rect x="40" y="50" width="200" height="200" fill="url(#svval)" opacity="0.9"/>
+        <rect x="40" y="50" width="200" height="200" fill="none" stroke="#999" stroke-width="1"/>
+        <!-- 指示点（右上） -->
+        <circle cx="235" cy="62" r="7" fill="#fff" stroke="#333" stroke-width="2"/>
+      </g>
+      <!-- 四角标注 -->
+      <text x="50" y="46" font-size="12" fill="#555">白</text>
+      <text x="218" y="46" font-size="12" fill="#555">纯色</text>
+      <text x="50" y="264" font-size="12" fill="#555">灰</text>
+      <text x="214" y="264" font-size="12" fill="#555">黑</text>
+      <text x="140" y="285" font-size="11" fill="#888" text-anchor="middle">← 饱和度 →（去色）</text>
+      <text x="18" y="150" font-size="11" fill="#888" transform="rotate(-90 18 150)">明度 ↓（变黑）</text>
+
+      <!-- 箭头 -->
+      <path d="M270 150 L330 150" stroke="#9ca3af" stroke-width="2" marker-end="url(#arr)"/>
+      <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="#9ca3af"/></marker></defs>
+
+      <!-- 右：立方体（等距，两个可见面 + 顶面） -->
+      <text x="600" y="36" font-size="14" font-weight="700" fill="#333" text-anchor="middle">3D 立方体（外露面 = SV 矩形同款）</text>
+      <g>
+        <!-- 顶面：黑→红→黄→绿 -->
+        <polygon points="600,70 700,120 600,170 500,120" fill="#ffcc00" stroke="#666" stroke-width="1.5"/>
+        <polygon points="600,70 700,120 700,260 600,310" fill="#ff0000" stroke="#666" stroke-width="1.5"/>
+        <polygon points="500,120 600,170 600,310 500,260" fill="#00aa00" stroke="#666" stroke-width="1.5"/>
+        <!-- 顶点 -->
+        <circle cx="600" cy="70" r="6" fill="#fff" stroke="#333" stroke-width="2"/>
+        <circle cx="700" cy="120" r="6" fill="#fff" stroke="#333" stroke-width="2"/>
+        <circle cx="600" cy="170" r="6" fill="#fff" stroke="#333" stroke-width="2"/>
+        <circle cx="500" cy="120" r="6" fill="#fff" stroke="#333" stroke-width="2"/>
+        <circle cx="700" cy="260" r="6" fill="#fff" stroke="#333" stroke-width="2"/>
+        <circle cx="600" cy="310" r="6" fill="#fff" stroke="#333" stroke-width="2"/>
+        <circle cx="500" cy="260" r="6" fill="#fff" stroke="#333" stroke-width="2"/>
+        <circle cx="600" cy="240" r="7" fill="#2196f3" stroke="#fff" stroke-width="2"/>
+        <!-- 顶点标注 -->
+        <text x="600" y="58" font-size="12" fill="#333" text-anchor="middle">黑</text>
+        <text x="716" y="122" font-size="12" fill="#333">红</text>
+        <text x="600" y="186" font-size="12" fill="#333" text-anchor="middle">黄</text>
+        <text x="480" y="122" font-size="12" fill="#333" text-anchor="end">绿</text>
+        <text x="716" y="262" font-size="12" fill="#333">蓝</text>
+        <text x="600" y="330" font-size="12" fill="#333" text-anchor="middle">品红</text>
+        <text x="478" y="262" font-size="12" fill="#333" text-anchor="end">青</text>
+      </g>
+      <text x="600" y="352" font-size="11" fill="#888" text-anchor="middle">每个外露面 = 两个纯色 + 黑 + 白/灰 的渐变面（完全可见）</text>
+      <text x="600" y="372" font-size="11" fill="#888" text-anchor="middle">内部斜截面（固定色相的 SV 面）存在但无需观察——面内拖拽即覆盖</text>
+
+      <!-- 底部对照表 -->
+      <g>
+        <rect x="60" y="380" width="120" height="26" rx="6" fill="#fff" stroke="#d0d7de"/>
+        <text x="120" y="397" font-size="12" fill="#333" text-anchor="middle">四个角 = 白灰黑纯色</text>
+      </g>
+      <g>
+        <rect x="560" y="380" width="130" height="26" rx="6" fill="#fff" stroke="#d0d7de"/>
+        <text x="625" y="397" font-size="12" fill="#333" text-anchor="middle">四角 = 黑红黄绿（每面不同）</text>
+      </g>
+    </svg>
+  </div>
+  <div class="card">
+    <table>
+      <tr><th>概念</th><th>vanilla 顶部矩形</th><th>3D 立方体</th></tr>
+      <tr><td>选择维度</td><td>饱和度 × 明度（固定色相）</td><td>面内拖拽（固定一通道）× 三轴拖拽</td></tr>
+      <tr><td>白/黑/灰从哪来</td><td>饱和度去色 → 灰白；明度压暗 → 黑</td><td>立方体顶点本身就有黑、白、6 纯色</td></tr>
+      <tr><td>可见性</td><td>整个矩形可见</td><td>三个外露面可见；内部斜截面不可见但不需要</td></tr>
+      <tr><td>覆盖范围</td><td>仅当前色相的 S/V</td><td>全部颜色空间（三通道任意组合）</td></tr>
+    </table>
+  </div>
+</body>
+</html>

@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>色相环交互原型 — Hue Ring Prototype</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f3f4f6; margin: 0; padding: 40px 24px; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+  h1 { margin: 0; font-size: 17px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #374151; }
+  .sub { margin: 0; font-size: 13px; color: #6b7280; max-width: 660px; text-align: center; line-height: 1.7; }
+  .row { display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .panel { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 16px 20px; box-shadow: 0 6px 20px rgba(0,0,0,.07); }
+  h3 { margin: 0 0 10px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; }
+  pre { font: 13px/1.8 ui-monospace, monospace; color: #111827; margin: 0; }
+  .hint { font-size: 12px; color: #9ca3af; line-height: 1.7; }
+  .swatch { width: 100%; height: 44px; border-radius: 8px; border: 1px solid rgba(0,0,0,.12); margin-top: 10px; }
+  canvas#cv { display: block; border-radius: 12px; background: #fafafa; border: 1px solid #e5e7eb; touch-action: none; cursor: crosshair; }
+</style>
+</head>
+<body>
+  <h1>Hue Ring · Prototype</h1>
+  <p class="sub">拖动右下角彩虹色相环：转一圈 = 色相 0°→360°，对应 RGB 立方体的六个纯色顶点循环（红→黄→绿→青→蓝→品红）。方案 B 形态：常驻迷你环；方案 A 形态：长按立方体顶点弹出同款环。</p>
+  <div class="row">
+    <div class="panel">
+      <canvas id="cv" width="360" height="360"></canvas>
+    </div>
+    <div class="panel">
+      <h3>色相实时值</h3>
+      <pre id="out"></pre>
+      <div class="swatch" id="sw"></div>
+      <p class="hint">拖动环 → H 变化（S=100%, L=50% 固定）<br>立方体示意：六个顶点 = 纯色，环即顶点循环</p>
+      <h3 style="margin-top:18px">六顶点对照</h3>
+      <pre id="verts"></pre>
+    </div>
+  </div>
+  <script>
+  (() => {
+    const cv = document.getElementById('cv');
+    const ctx = cv.getContext('2d');
+    const out = document.getElementById('out');
+    const sw = document.getElementById('sw');
+    const verts = document.getElementById('verts');
+    const S = 360, C = { x: 165, y: 185 };          // 画布中心
+    const RING_C = { x: 300, y: 300 };              // 色相环中心（右下角）
+    const R_OUT = 52, R_IN = 38;                    // 环外/内半径
+    const MID = (R_OUT + R_IN) / 2;
+    let hue = 200;                                  // 当前色相
+    let dragging = false;
+
+    // 立方体六顶点（等距投影简化）
+    const VERT = [
+      { x: C.x - 70, y: C.y - 30, c: '#ff0000', l: 'R' },
+      { x: C.x,      y: C.y - 78, c: '#ffff00', l: 'Y' },
+      { x: C.x + 70, y: C.y - 30, c: '#00ff00', l: 'G' },
+      { x: C.x + 70, y: C.y + 30, c: '#00ffff', l: 'C' },
+      { x: C.x,      y: C.y + 78, c: '#0000ff', l: 'B' },
+      { x: C.x - 70, y: C.y + 30, c: '#ff00ff', l: 'M' },
+    ];
+
+    function hue2rgb(h) {
+      const s = 1, l = 0.5;
+      const c = (1 - Math.abs(2 * l - 1)) * s;
+      const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+      const m = l - c / 2;
+      let r = 0, g = 0, b = 0;
+      if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; }
+      else if (h < 180) { g = c; b = x; } else if (h < 240) { g = x; b = c; }
+      else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+      return { r: Math.round((r + m) * 255), g: Math.round((g + m) * 255), b: Math.round((b + m) * 255) };
+    }
+
+    function pos(e) {
+      const r = cv.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    }
+    function angleOf(p) {
+      return (Math.atan2(p.x - RING_C.x, -(p.y - RING_C.y)) + Math.PI * 2) % (Math.PI * 2);
+    }
+    function inRing(p) {
+      const d = Math.hypot(p.x - RING_C.x, p.y - RING_C.y);
+      return d >= R_IN - 3 && d <= R_OUT + 5;
+    }
+    function ringPoint(a) {
+      return { x: RING_C.x + MID * Math.sin(a), y: RING_C.y - MID * Math.cos(a) };
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, S, S);
+      ctx.fillStyle = '#fafafa';
+      ctx.fillRect(0, 0, S, S);
+
+      // 立方体六边形 + 顶点
+      ctx.beginPath();
+      VERT.forEach((v, i) => { i === 0 ? ctx.moveTo(v.x, v.y) : ctx.lineTo(v.x, v.y); });
+      ctx.closePath();
+      ctx.strokeStyle = 'rgba(0,0,0,.25)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      VERT.forEach((v) => {
+        ctx.beginPath(); ctx.arc(v.x, v.y, 7, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff'; ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.beginPath(); ctx.arc(v.x, v.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = v.c; ctx.fill();
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#333';
+        ctx.fillText(v.l, v.x + (v.x > C.x ? 14 : -14), v.y + (v.y > C.y ? 14 : -14));
+      });
+      // 中心预览
+      const rgb = hue2rgb(hue);
+      ctx.beginPath(); ctx.arc(C.x, C.y, 26, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = 1; ctx.stroke();
+      ctx.font = '11px monospace'; ctx.fillStyle = '#fff';
+      ctx.fillText('h=' + hue.toFixed(0), C.x, C.y + 3);
+
+      // 色相环（彩虹 conic）
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(RING_C.x, RING_C.y, R_OUT, 0, Math.PI * 2);
+      ctx.arc(RING_C.x, RING_C.y, R_IN, 0, Math.PI * 2, true);
+      ctx.clip();
+      const grad = ctx.createConicGradient(-Math.PI / 2, RING_C.x, RING_C.y);
+      const stops = [0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6, 1];
+      const cols = ['#ff0000', '#ffff00', '#00ff00', '#00ffff', '#0000ff', '#ff00ff', '#ff0000'];
+      stops.forEach((s, i) => grad.addColorStop(s, cols[i]));
+      ctx.fillStyle = grad;
+      ctx.fillRect(RING_C.x - R_OUT - 10, RING_C.y - R_OUT - 10, (R_OUT + 10) * 2, (R_OUT + 10) * 2);
+      ctx.restore();
+      ctx.beginPath();
+      ctx.arc(RING_C.x, RING_C.y, R_OUT, 0, Math.PI * 2);
+      ctx.arc(RING_C.x, RING_C.y, R_IN, 0, Math.PI * 2, true);
+      ctx.strokeStyle = 'rgba(0,0,0,.25)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      // 环上指针（当前色相位置）
+      const a = hue * Math.PI * 2 / 360;
+      const ip = ringPoint(a);
+      ctx.beginPath(); ctx.arc(ip.x, ip.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 1.2; ctx.stroke();
+
+      // 12 点刻度（h=0）
+      ctx.beginPath();
+      ctx.arc(RING_C.x, RING_C.y - R_OUT - 3, 1.8, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,.3)';
+      ctx.fill();
+
+      renderOut(rgb);
+    }
+
+    function renderOut(rgb) {
+      out.textContent = 'hue:    ' + hue.toFixed(0) + ' deg\nrgb:    ' + rgb.r + ', ' + rgb.g + ', ' + rgb.b + '\nhex:    #' + [rgb.r, rgb.g, rgb.b].map(v => v.toString(16).padStart(2, '0')).join('');
+      sw.style.background = 'rgb(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ')';
+      verts.textContent = '红 0°   → 黄 60°\n绿 120° → 青 180°\n蓝 240° → 品红 300°';
+    }
+
+    cv.addEventListener('pointerdown', (e) => {
+      const p = pos(e);
+      if (inRing(p)) { dragging = true; hue = angleOf(p) * 360 / (Math.PI * 2); draw(); }
+    });
+    cv.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const p = pos(e);
+      if (inRing(p) || Math.hypot(p.x - RING_C.x, p.y - RING_C.y) <= R_OUT + 8) {
+        hue = angleOf(p) * 360 / (Math.PI * 2);
+        draw();
+      }
+    });
+    const end = () => { dragging = false; };
+    cv.addEventListener('pointerup', end);
+    cv.addEventListener('pointercancel', end);
+    cv.addEventListener('pointerleave', end);
+
+    draw();
+  })();
+  </script>
+</body>
+</html>

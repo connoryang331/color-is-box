@@ -3,7 +3,7 @@ import type {
   PickerOptions, ColorOutput, ColorChangeCallback, BoxColorPicker,
 } from './types';
 import { AXIS_LABELS, AXIS_MAX } from './types';
-import { rgbToHsb, rgbToOklch, rgbToHex, hexToRgb, rgbToValues, valuesToRgb, valuesToChannels } from './color-math';
+import { rgbToHsb, hsbToRgb, rgbToOklch, rgbToHex, hexToRgb, rgbToValues, valuesToRgb, valuesToChannels } from './color-math';
 import { createRenderContext, render, setBoxInvert, project, faceHitTest, FACES } from './box-renderer';
 export { setBoxInvert };
 import { createInteraction } from './interaction';
@@ -89,6 +89,15 @@ export function createBoxColorPicker(
     scheduleRender();
   }
 
+  // 旋转立方体（旋钮）：修改当前颜色的饱和度（HSV 中间转换，保持色相/明度不变）
+  function setSaturation(s: number): void {
+    const rgb = displayRgb();
+    const hsb = rgbToHsb(rgb);
+    hsb.s = Math.max(0, Math.min(100, s * 100));
+    const newRgb = hsbToRgb(hsb);
+    setColor(boxInverted ? { r: 255 - newRgb.r, g: 255 - newRgb.g, b: 255 - newRgb.b } : newRgb);
+  }
+
   const listeners: Set<ColorChangeCallback> = new Set();
 
   // ── DOM ───────────────────────────────────────────────────────────────
@@ -136,6 +145,8 @@ export function createBoxColorPicker(
     setAlpha,
     () => alpha,
     () => project(dotValues, rc.scale, rc.center),
+    setSaturation,
+    () => rgbToHsb(displayRgb()).s / 100,
   );
 
   let boxInverted = false;
@@ -227,7 +238,7 @@ export function createBoxColorPicker(
   }
 
   function renderFrame(): void {
-    render(rc, boxExtent, dotValues, dotFace, mode, interaction.state, showAxisLabels, { active: interaction.state.alphaMode, alpha, rgb: displayRgb() });
+    render(rc, boxExtent, dotValues, dotFace, mode, interaction.state, showAxisLabels, { active: interaction.state.alphaMode, alpha, rgb: displayRgb() }, { active: interaction.state.viewRotating || interaction.state.ringAlpha > 0, sat: rgbToHsb(displayRgb()).s / 100, rgb: hsbToRgb({ h: rgbToHsb(displayRgb()).h, s: 100, b: 100 }) });
   }
 
   // ── UI updates ────────────────────────────────────────────────────────
