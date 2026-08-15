@@ -184,26 +184,32 @@ export function getEdgeStyle(): EdgeStyleConfig {
 }
 
 /**
- * 立方体 12 条边以及其相邻的两个面索引 (0: -X, 1: +X, 2: -Y, 3: +Y, 4: -Z, 5: +Z)
+ * 立方体 12 条边以及其相邻的两个面在 FACES 数组中的索引：
+ * FACES[0]: +Z (quad [3, 5, 7, 6])
+ * FACES[1]: +X (quad [1, 4, 7, 5])
+ * FACES[2]: +Y (quad [2, 4, 7, 6])
+ * FACES[3]: -Z (quad [0, 1, 4, 2])
+ * FACES[4]: -X (quad [0, 2, 6, 3])
+ * FACES[5]: -Y (quad [0, 1, 5, 3])
  */
 const EDGE_TOPOLOGY: { edge: [number, number]; faces: [number, number] }[] = [
-  // 底面 4 条边 (z=0, -Z面为 4)
-  { edge: [0, 1], faces: [4, 2] }, // -Z, -Y
-  { edge: [1, 4], faces: [4, 1] }, // -Z, +X
-  { edge: [4, 2], faces: [4, 3] }, // -Z, +Y
-  { edge: [2, 0], faces: [4, 0] }, // -Z, -X
+  // 底面 4 条边 (z=0, 相邻 -Z 面即 3)
+  { edge: [0, 1], faces: [3, 5] }, // -Z(3), -Y(5)
+  { edge: [1, 4], faces: [3, 1] }, // -Z(3), +X(1)
+  { edge: [4, 2], faces: [3, 2] }, // -Z(3), +Y(2)
+  { edge: [2, 0], faces: [3, 4] }, // -Z(3), -X(4)
 
-  // 顶面 4 条边 (z=1, +Z面为 5)
-  { edge: [3, 5], faces: [5, 2] }, // +Z, -Y
-  { edge: [5, 7], faces: [5, 1] }, // +Z, +X
-  { edge: [7, 6], faces: [5, 3] }, // +Z, +Y
-  { edge: [6, 3], faces: [5, 0] }, // +Z, -X
+  // 顶面 4 条边 (z=1, 相邻 +Z 面即 0)
+  { edge: [3, 5], faces: [0, 5] }, // +Z(0), -Y(5)
+  { edge: [5, 7], faces: [0, 1] }, // +Z(0), +X(1)
+  { edge: [7, 6], faces: [0, 2] }, // +Z(0), +Y(2)
+  { edge: [6, 3], faces: [0, 4] }, // +Z(0), -X(4)
 
   // 4 条纵向立柱边
-  { edge: [0, 3], faces: [0, 2] }, // -X, -Y
-  { edge: [1, 5], faces: [1, 2] }, // +X, -Y
-  { edge: [4, 7], faces: [1, 3] }, // +X, +Y
-  { edge: [2, 6], faces: [0, 3] }, // -X, +Y
+  { edge: [0, 3], faces: [4, 5] }, // -X(4), -Y(5)
+  { edge: [1, 5], faces: [1, 5] }, // +X(1), -Y(5)
+  { edge: [4, 7], faces: [1, 2] }, // +X(1), +Y(2)
+  { edge: [2, 6], faces: [4, 2] }, // -X(4), +Y(2)
 ];
 
 /**
