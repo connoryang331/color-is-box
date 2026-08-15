@@ -55,6 +55,41 @@
 .box-corner-left { left: -2px; bottom: -2px; } /* 贴边框边缘，无缝隙 */
 .box-corner-right { right: -2px; bottom: -2px; }
 
+/* 右侧 XYZ 坐标轴显示/隐藏按钮 */
+.box-axis-toggle-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--background-secondary, rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--background-modifier-border, rgba(0, 0, 0, 0.1));
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 0;
+  color: var(--text-muted, #888);
+  opacity: 0.6;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+.box-axis-toggle-btn:hover {
+  opacity: 1;
+  color: var(--text-normal, #1a1a1a);
+  background: var(--background-modifier-hover, rgba(0, 0, 0, 0.1));
+}
+.box-axis-toggle-btn.active {
+  opacity: 0.9;
+  color: var(--interactive-accent, #007AFF);
+  border-color: rgba(0, 122, 255, 0.3);
+  background: rgba(0, 122, 255, 0.08);
+}
+.box-axis-toggle-btn svg {
+  display: block;
+}
+
 .box-picker-controls {
   display: flex;
   flex-direction: column;

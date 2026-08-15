@@ -13,6 +13,10 @@
   "files": ["dist", "src", "README.md"],
   "keywords": ["color-picker", "web-component", "zero-dependency", "oklch", "hsb", "rgb", "custom-element"],
   "license": "MIT",
-  "scripts": { "build": "node build.mjs", "test": "node --test test/" },
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/",
+    "dev": "node -e \"import('http').then(({createServer}) => import('fs').then(({readFileSync, existsSync}) => import('path').then(({join, extname}) => createServer((req, res) => { const p = req.url === '/' ? '/demo/index.html' : req.url; const f = join(process.cwd(), p); if (!existsSync(f)) { res.writeHead(404); return res.end('Not Found'); } const m = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css' }; res.writeHead(200, { 'Content-Type': m[extname(f)] || 'application/octet-stream' }); res.end(readFileSync(f)); }).listen(3000, () => console.log('Server running: http://localhost:3000/demo/index.html')))))\""
+  },
   "devDependencies": { "esbuild": "^0.25.0" }
 }

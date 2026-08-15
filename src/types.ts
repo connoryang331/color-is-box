@@ -46,6 +46,46 @@ export interface PickerState {
   axisLock: AxisLock;
 }
 
+export interface EdgeStyleConfig {
+  showVisible: boolean;   // 前景可见边
+  showHidden: boolean;    // 背部遮挡暗边（透视骨架）
+  width: number;          // 边线粗细 (px)
+  dashed: boolean;        // 是否虚线
+  color: string;          // 线条颜色 (支持 rgba / hex)
+  opacity: number;        // 透明度 0..1
+}
+
+export const DEFAULT_EDGE_CONFIG: EdgeStyleConfig = {
+  showVisible: true,
+  showHidden: false,
+  width: 1.5,
+  dashed: false,
+  color: '#ffffff',
+  opacity: 0.45,
+};
+
+export interface GuideVisibility {
+  vertexX: boolean;
+  vertexY: boolean;
+  vertexZ: boolean;
+  centerX: boolean;
+  centerY: boolean;
+  centerZ: boolean;
+  yawArc: boolean;
+  pitchArc: boolean;
+}
+
+export const DEFAULT_GUIDES: GuideVisibility = {
+  vertexX: true,
+  vertexY: true,
+  vertexZ: true,
+  centerX: true,
+  centerY: true,
+  centerZ: true,
+  yawArc: true,
+  pitchArc: true,
+};
+
 /** Configuration options for creating the picker. */
 export interface PickerOptions {
   initialColor?: RGBColor;
@@ -79,6 +119,15 @@ export interface BoxColorPicker {
   getMode(): ColorMode;
   setAlpha(a: number): void;
   getAlpha(): number;
+  getRotation(): { yawDeg: number; pitchDeg: number };
+  setRotation(yawDeg: number, pitchDeg: number): void;
+  getAxisRotation(): { rotXDeg: number; rotYDeg: number; rotZDeg: number };
+  setAxisRotation(xDeg: number, yDeg: number, zDeg: number): void;
+  getGuides(): GuideVisibility;
+  setGuides(g: Partial<GuideVisibility>): void;
+  toggleAllGuides(visible?: boolean): void;
+  getEdgeStyle(): EdgeStyleConfig;
+  setEdgeStyle(style: Partial<EdgeStyleConfig>): void;
   on(event: 'change', callback: ColorChangeCallback): void;
   off(event: 'change', callback: ColorChangeCallback): void;
   destroy(): void;

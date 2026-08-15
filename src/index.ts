@@ -1,12 +1,14 @@
 import type {
   RGBColor, ColorMode, Vec3,
-  PickerOptions, ColorOutput, ColorChangeCallback, BoxColorPicker,
+  PickerOptions, ColorOutput, ColorChangeCallback, BoxColorPicker, GuideVisibility, EdgeStyleConfig,
 } from './types';
-import { AXIS_LABELS, AXIS_MAX } from './types';
+import { AXIS_LABELS, AXIS_MAX, DEFAULT_GUIDES, DEFAULT_EDGE_CONFIG } from './types';
 import { rgbToHsb, hsbToRgb, rgbToOklch, rgbToHex, hexToRgb, rgbToValues, valuesToRgb, valuesToChannels } from './color-math';
-import { createRenderContext, render, setBoxInvert, project, faceHitTest, FACES } from './box-renderer';
-export { setBoxInvert };
+import { createRenderContext, render, setBoxInvert, project, faceHitTest, FACES, getCameraAnglesDeg, setCameraAnglesDeg, getRotationDeg, setRotationDeg, setZoomMultiplier, getZoomMultiplier, setBoxDimensions, getBoxDimensions, setEdgeStyle, getEdgeStyle } from './box-renderer';
+export { setBoxInvert, getCameraAnglesDeg, setCameraAnglesDeg, getRotationDeg, setRotationDeg, setZoomMultiplier, getZoomMultiplier, setBoxDimensions, getBoxDimensions, setEdgeStyle, getEdgeStyle, DEFAULT_GUIDES, DEFAULT_EDGE_CONFIG };
+export type { GuideVisibility, EdgeStyleConfig };
 import { createInteraction } from './interaction';
+import { createControls } from './controls';
 import cssText from './style.css?raw';
 
 export type { RGBColor, ColorMode, ColorOutput, PickerOptions, BoxColorPicker };
@@ -112,6 +114,33 @@ export function createBoxColorPicker(
 
   const rc = createRenderContext(canvas, size);
 
+  let guides: GuideVisibility = { ...DEFAULT_GUIDES };
+  let allAxesVisible = true;
+
+  // 右侧快捷切换按钮：显示/隐藏全部辅助线
+  const axisToggleBtn = document.createElement('button');
+  axisToggleBtn.className = 'box-axis-toggle-btn active';
+  axisToggleBtn.title = 'Toggle All Guides';
+  axisToggleBtn.setAttribute('aria-label', 'Toggle All Guides');
+  axisToggleBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M3 21V3"/><path d="M3 21l7-7"/><path d="M19 17l2 4-4-2"/><path d="M7 5l-4-2 2 4"/></svg>`;
+  axisToggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    allAxesVisible = !allAxesVisible;
+    guides = {
+      vertexX: allAxesVisible,
+      vertexY: allAxesVisible,
+      vertexZ: allAxesVisible,
+      centerX: allAxesVisible,
+      centerY: allAxesVisible,
+      centerZ: allAxesVisible,
+      yawArc: allAxesVisible,
+      pitchArc: allAxesVisible,
+    };
+    axisToggleBtn.classList.toggle('active', allAxesVisible);
+    scheduleRender();
+  });
+  root.appendChild(axisToggleBtn);
+
   // Controls (hex, swatch, mode toggle, channels) — only if enabled
   let swatch: HTMLDivElement | null = null;
   const controls = document.createElement('div');
@@ -120,11 +149,9 @@ export function createBoxColorPicker(
   swatch.className = 'box-picker-swatch';
   controls.appendChild(swatch);
   root.appendChild(controls);
-  // 可选控件（输入框/模式按钮/角按钮）按需加载——核心包保持精简
+  // 可选控件（输入框/模式按钮/角按钮）
   if (showInputs || showModeToggle || showCorners) {
-    import('./controls').then((m) => {
-      m.createControls(controls, controlsCtx, { showInputs, showModeToggle, showCorners });
-    }).catch(() => { /* ignore */ });
+    createControls(controls, controlsCtx, { showInputs, showModeToggle, showCorners });
   }
 
   container.appendChild(root);
@@ -150,10 +177,6 @@ export function createBoxColorPicker(
   );
 
   let boxInverted = false;
-  let showAxisLabels = true;
-  // 鼠标进入/离开时随机切换 RGB 文本显示状态（无需按钮，多试几次即可看到两种状态）
-  canvas.addEventListener('mouseenter', () => { showAxisLabels = true; scheduleRender(); });
-  canvas.addEventListener('mouseleave', () => { showAxisLabels = false; scheduleRender(); });
 
   // 双击翻转颜色：整个立方体渐变取反 + 当前色取 RGB 补色（白色 ↔ 黑色；三个模式均生效）
   canvas.addEventListener('dblclick', () => {
@@ -238,7 +261,7 @@ export function createBoxColorPicker(
   }
 
   function renderFrame(): void {
-    render(rc, boxExtent, dotValues, dotFace, mode, interaction.state, showAxisLabels, { active: interaction.state.alphaMode, alpha, rgb: displayRgb() });
+    render(rc, boxExtent, dotValues, dotFace, mode, interaction.state, guides, { active: interaction.state.alphaMode, alpha, rgb: displayRgb() });
   }
 
   // ── UI updates ────────────────────────────────────────────────────────
@@ -356,6 +379,52 @@ export function createBoxColorPicker(
     getAlpha: () => alpha,
     setMode(m: ColorMode) {
       switchMode(m);
+    },
+    getRotation: () => getCameraAnglesDeg(),
+    setRotation: (yawDeg: number, pitchDeg: number) => {
+      setCameraAnglesDeg(yawDeg, pitchDeg);
+      scheduleRender();
+    },
+    getAxisRotation: () => getRotationDeg(),
+    setAxisRotation: (xDeg: number, yDeg: number, zDeg: number) => {
+      setRotationDeg(xDeg, yDeg, zDeg);
+      scheduleRender();
+    },
+    getGuides: () => ({ ...guides }),
+    setGuides: (g: Partial<GuideVisibility>) => {
+      guides = { ...guides, ...g };
+      scheduleRender();
+    },
+    toggleAllGuides: (visible?: boolean) => {
+      const v = visible !== undefined ? visible : !allAxesVisible;
+      allAxesVisible = v;
+      guides = {
+        vertexX: v,
+        vertexY: v,
+        vertexZ: v,
+        centerX: v,
+        centerY: v,
+        centerZ: v,
+        yawArc: v,
+        pitchArc: v,
+      };
+      axisToggleBtn.classList.toggle('active', v);
+      scheduleRender();
+    },
+    setZoom: (z: number) => {
+      setZoomMultiplier(z);
+      scheduleRender();
+    },
+    getZoom: () => getZoomMultiplier(),
+    setDimensions: (x: number, y: number, z: number) => {
+      setBoxDimensions(x, y, z);
+      scheduleRender();
+    },
+    getDimensions: () => getBoxDimensions(),
+    getEdgeStyle: () => getEdgeStyle(),
+    setEdgeStyle: (style: Partial<EdgeStyleConfig>) => {
+      setEdgeStyle(style);
+      scheduleRender();
     },
     on(event: 'change', callback: ColorChangeCallback) {
       listeners.add(callback);

@@ -10,27 +10,247 @@
   h1 { margin: 0 0 16px; font-size: 18px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #374151; text-align: center; }
   .subtitle { margin: 14px 0 0; font-size: 12px; font-weight: 400; letter-spacing: .04em; color: #9ca3af; text-align: center; }
   .panel-holder { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.07); padding: 0; overflow: hidden; }
-  .panel-info { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px 24px; box-shadow: 0 6px 20px rgba(0,0,0,.07); width: 300px; min-height: 252px; box-sizing: border-box; display: flex; flex-direction: column; }
+  .panel-info { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 20px 24px; box-shadow: 0 6px 20px rgba(0,0,0,.07); width: 310px; min-height: 252px; box-sizing: border-box; display: flex; flex-direction: column; }
   #current-card { position: fixed; right: 24px; bottom: 24px; }
   #how-card { position: fixed; left: 24px; bottom: 24px; }
   h3 { margin: 0 0 16px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: #9ca3af; }
   .rows { flex: 1; display: flex; flex-direction: column; justify-content: center; }
-  .row { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 0; }
-  .row .label { font-size: 13px; font-weight: 600; color: #6b7280; letter-spacing: .01em; }
-  .row .val { font: 12.5px/1.5 ui-monospace, "SF Mono", "Cascadia Code", monospace; color: #111827; letter-spacing: .01em; }
-  .tips { margin: 0; padding: 0; list-style: none; font-size: 12.5px; line-height: 1.6; color: #374151; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-  .tips li { padding: 9px 0; display: flex; gap: 8px; }
-  .tips li::before { content: "·"; color: #7c3aed; font-weight: 700; }
+  .row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; }
+  .row .label { font-size: 12px; font-weight: 600; color: #6b7280; letter-spacing: .01em; }
+  /* Left aligned values */
+  .row .val { font: 12.5px/1.5 ui-monospace, "SF Mono", "Cascadia Code", monospace; color: #111827; letter-spacing: .01em; text-align: left; margin-left: 12px; flex: 1; }
+
+  /* Blender-style numeric slider (Blender 3D exact UI theme) */
+  .blender-slider {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 155px;
+    height: 26px;
+    background: #393939;
+    border: 1px solid #222222;
+    border-radius: 4px;
+    overflow: hidden;
+    cursor: ew-resize;
+    user-select: none;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .blender-slider:hover {
+    background: #474747;
+    border-color: #111111;
+  }
+  .blender-slider .bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    opacity: 0.45;
+    pointer-events: none;
+    transition: width 0.04s linear;
+  }
+  .blender-slider.rot-x .bar { background: #e03131; }
+  .blender-slider.rot-y .bar { background: #2f9e44; }
+  .blender-slider.rot-z .bar { background: #1971c2; }
+  .blender-slider input {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    text-align: center;
+    font: 12px/26px ui-monospace, "SF Mono", monospace;
+    font-weight: 600;
+    color: #f1f3f5;
+    cursor: ew-resize;
+    padding: 0 4px;
+    box-sizing: border-box;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  }
+  .blender-slider input:focus {
+    background: #1e1e1e;
+    color: #ffffff;
+    cursor: text;
+    border: 1px solid #4dabf7;
+  }
+
+  /* Guide toggle switches list */
+  .guides-panel {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dashed #e5e7eb;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .guide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+  }
+  .guide-header span {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #6b7280;
+  }
+  .btn-all-group {
+    display: flex;
+    gap: 4px;
+  }
+  .btn-mini {
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    cursor: pointer;
+    color: #374151;
+    transition: all 0.15s;
+  }
+  .btn-mini:hover {
+    background: #e5e7eb;
+    color: #111827;
+  }
+  .btn-mini.active {
+    background: #007AFF;
+    border-color: #007AFF;
+    color: #ffffff;
+  }
+  .guide-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .guide-toggle-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #4b5563;
+    cursor: pointer;
+    user-select: none;
+  }
+  .guide-toggle-item input[type="checkbox"] {
+    accent-color: #007AFF;
+    cursor: pointer;
+    margin: 0;
+  }
+  .guide-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .guide-dot.red { background: #ef4444; }
+  .guide-dot.green { background: #22c55e; }
+  .guide-dot.blue { background: #3b82f6; }
 </style>
 </head>
 <body>
-  <div class="panel-info" id="current-card">
-    <h3>Current color</h3>
+  <div class="panel-info" id="current-card" style="width: 320px;">
+    <h3>Current color & Guides</h3>
     <div class="rows">
       <div class="row"><span class="label">HEX</span><span class="val" id="v-hex">#ffffff</span></div>
       <div class="row"><span class="label">RGB</span><span class="val" id="v-rgb">255, 255, 255</span></div>
       <div class="row"><span class="label">HSB</span><span class="val" id="v-hsb">0.0, 0.0, 100.0</span></div>
       <div class="row"><span class="label">OKLCH</span><span class="val" id="v-oklch">1.000, 0.000, 0.0</span></div>
+      
+      <!-- 3D Rotation Controls -->
+      <div class="row" style="margin-top: 6px; padding-top: 8px; border-top: 1px dashed #e5e7eb;">
+        <span class="label" style="color: #ef4444;">ROT X</span>
+        <div class="blender-slider rot-x" id="slider-rot-x">
+          <div class="bar"></div>
+          <input type="text" id="v-rot-x" value="20.0°">
+        </div>
+      </div>
+      <div class="row">
+        <span class="label" style="color: #22c55e;">ROT Y</span>
+        <div class="blender-slider rot-y" id="slider-rot-y">
+          <div class="bar"></div>
+          <input type="text" id="v-rot-y" value="0.0°">
+        </div>
+      </div>
+      <div class="row">
+        <span class="label" style="color: #3b82f6;">ROT Z</span>
+        <div class="blender-slider rot-z" id="slider-rot-z">
+          <div class="bar"></div>
+          <input type="text" id="v-rot-z" value="-30.0°">
+        </div>
+      </div>
+
+      <!-- 3D Zoom & Size Controls -->
+      <div class="row" style="margin-top: 4px; padding-top: 6px; border-top: 1px dashed #e5e7eb;">
+        <span class="label" style="color: #6366f1;">ZOOM</span>
+        <div class="blender-slider" id="slider-zoom">
+          <div class="bar" style="background: #6366f1;"></div>
+          <input type="text" id="v-zoom" value="1.00x">
+        </div>
+      </div>
+      <div class="row">
+        <span class="label" style="color: #8b5cf6;">SCALE</span>
+        <div class="blender-slider" id="slider-scale">
+          <div class="bar" style="background: #8b5cf6;"></div>
+          <input type="text" id="v-scale" value="1.00">
+        </div>
+      </div>
+
+      <!-- Quick Reset Controls -->
+      <div style="margin-top: 8px; display: flex; justify-content: flex-end;">
+        <button class="btn-mini" id="btn-reset-view" style="padding: 4px 10px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          Reset View & Defaults
+        </button>
+      </div>
+
+      <!-- Individual Guide Switches & Master Buttons -->
+      <div class="guides-panel">
+        <div class="guide-header">
+          <span>Guide Lines</span>
+          <div class="btn-all-group">
+            <button class="btn-mini" id="btn-show-all">Show All</button>
+            <button class="btn-mini" id="btn-hide-all">Hide All</button>
+          </div>
+        </div>
+        <div class="guide-grid">
+          <label class="guide-toggle-item"><input type="checkbox" id="g-vx" checked><span class="guide-dot red"></span> Vertex X</label>
+          <label class="guide-toggle-item"><input type="checkbox" id="g-cx" checked><span class="guide-dot red"></span> Center X</label>
+          <label class="guide-toggle-item"><input type="checkbox" id="g-vy" checked><span class="guide-dot green"></span> Vertex Y</label>
+          <label class="guide-toggle-item"><input type="checkbox" id="g-cy" checked><span class="guide-dot green"></span> Center Y</label>
+          <label class="guide-toggle-item"><input type="checkbox" id="g-vz" checked><span class="guide-dot blue"></span> Vertex Z</label>
+          <label class="guide-toggle-item"><input type="checkbox" id="g-cz" checked><span class="guide-dot blue"></span> Center Z</label>
+          <label class="guide-toggle-item"><input type="checkbox" id="g-yaw" checked>🔵 Yaw Arc</label>
+          <label class="guide-toggle-item"><input type="checkbox" id="g-pitch" checked>🔴 Pitch Arc</label>
+        </div>
+      </div>
+
+      <!-- 12 Cube Edges Style Controls -->
+      <div class="guides-panel" style="margin-top: 10px; padding-top: 10px;">
+        <div class="guide-header">
+          <span>12 Cube Edges</span>
+          <div class="btn-all-group">
+            <button class="btn-mini" id="btn-toggle-edges">Toggle Edges</button>
+          </div>
+        </div>
+        <div class="guide-grid" style="margin-bottom: 6px;">
+          <label class="guide-toggle-item"><input type="checkbox" id="e-vis" checked>Front Edges</label>
+          <label class="guide-toggle-item"><input type="checkbox" id="e-hid">Hidden Edges</label>
+          <label class="guide-toggle-item"><input type="checkbox" id="e-dash">Dashed Edges</label>
+          <label class="guide-toggle-item"><input type="color" id="e-col" value="#ffffff" style="width: 20px; height: 18px; border: none; padding: 0; cursor: pointer; background: transparent;">Edge Color</label>
+        </div>
+        <div class="row" style="padding: 3px 0;">
+          <span class="label" style="font-size: 11px;">EDGE WIDTH</span>
+          <div class="blender-slider" id="slider-edge-w" style="width: 120px; height: 22px;">
+            <div class="bar" style="background: #e5e7eb;"></div>
+            <input type="text" id="v-edge-w" value="1.5px" style="font-size: 11px; line-height: 22px;">
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <div class="center-col">
@@ -41,10 +261,10 @@
   <div class="panel-info" id="how-card">
     <h3>How to use</h3>
     <ul class="tips">
+      <li>Toggle individual guide lines or Show/Hide all with one click</li>
+      <li>Drag ROT X/Y/Z sliders horizontally (like Blender) or click to type</li>
       <li>Double-click the picker to invert colors (white ↔ black)</li>
-      <li>RGB is actually a button — drag along the XYZ axes to pick colors</li>
-      <li>RGB letters show/hide randomly on hover — handy for screenshots</li>
-      <li>Hover the picker to reveal corner buttons: ◣ Random color · ◢ Reset</li>
+      <li>Drag directly on the 3D box to rotate view freely in 3D</li>
     </ul>
   </div>
   <script src="../dist/color-is-box.iife.js"></script>
@@ -59,6 +279,265 @@
     };
     picker.on('change', show);
     show(picker.getColor());
+
+    // ── Guide Switches Logic ──
+    const guideCheckboxes = {
+      vertexX: document.getElementById('g-vx'),
+      vertexY: document.getElementById('g-vy'),
+      vertexZ: document.getElementById('g-vz'),
+      centerX: document.getElementById('g-cx'),
+      centerY: document.getElementById('g-cy'),
+      centerZ: document.getElementById('g-cz'),
+      yawArc: document.getElementById('g-yaw'),
+      pitchArc: document.getElementById('g-pitch'),
+    };
+
+    Object.entries(guideCheckboxes).forEach(([key, el]) => {
+      el.addEventListener('change', () => {
+        if (picker && picker.setGuides) {
+          picker.setGuides({ [key]: el.checked });
+        }
+      });
+    });
+
+    document.getElementById('btn-show-all').addEventListener('click', () => {
+      Object.values(guideCheckboxes).forEach(el => el.checked = true);
+      if (picker && picker.toggleAllGuides) picker.toggleAllGuides(true);
+    });
+
+    document.getElementById('btn-hide-all').addEventListener('click', () => {
+      Object.values(guideCheckboxes).forEach(el => el.checked = false);
+      if (picker && picker.toggleAllGuides) picker.toggleAllGuides(false);
+    });
+
+    // ── Quick Reset Logic ──
+    document.getElementById('btn-reset-view').addEventListener('click', () => {
+      if (picker.setAxisRotation) picker.setAxisRotation(20, 0, -30);
+      if (picker.setZoom) picker.setZoom(1.0);
+      if (picker.setDimensions) picker.setDimensions(1.0, 1.0, 1.0);
+      if (picker.setColor) picker.setColor({ r: 255, g: 255, b: 255 });
+      if (picker.toggleAllGuides) picker.toggleAllGuides(true);
+      if (picker.setEdgeStyle) picker.setEdgeStyle({ showVisible: true, showHidden: false, width: 1.5, dashed: false, color: '#ffffff' });
+      Object.values(guideCheckboxes).forEach(el => el.checked = true);
+      document.getElementById('e-vis').checked = true;
+      document.getElementById('e-hid').checked = false;
+      document.getElementById('e-dash').checked = false;
+      document.getElementById('e-col').value = '#ffffff';
+    });
+
+    // ── 12 Cube Edges Controls Logic ──
+    const eVis = document.getElementById('e-vis');
+    const eHid = document.getElementById('e-hid');
+    const eDash = document.getElementById('e-dash');
+    const eCol = document.getElementById('e-col');
+    const btnToggleEdges = document.getElementById('btn-toggle-edges');
+
+    const updateEdgeStyle = () => {
+      if (picker && picker.setEdgeStyle) {
+        picker.setEdgeStyle({
+          showVisible: eVis.checked,
+          showHidden: eHid.checked,
+          dashed: eDash.checked,
+          color: eCol.value,
+        });
+      }
+    };
+
+    [eVis, eHid, eDash, eCol].forEach(el => el.addEventListener('input', updateEdgeStyle));
+
+    let allEdgesOn = true;
+    btnToggleEdges.addEventListener('click', () => {
+      allEdgesOn = !allEdgesOn;
+      eVis.checked = allEdgesOn;
+      eHid.checked = allEdgesOn;
+      updateEdgeStyle();
+    });
+
+    const sEdgeW = makeGenericSlider('slider-edge-w', 'v-edge-w', () => picker.getEdgeStyle ? picker.getEdgeStyle().width : 1.5, (w) => { if (picker.setEdgeStyle) picker.setEdgeStyle({ width: w }); }, 0.5, 8.0, 'px', 1);
+
+    // ── Blender-style Slider & Input Logic ──
+    const initBlenderSlider = (sliderId, inputId, axis, minVal, maxVal) => {
+      const slider = document.getElementById(sliderId);
+      const input = document.getElementById(inputId);
+      const bar = slider.querySelector('.bar');
+      let isDragging = false;
+      let startX = 0;
+      let startVal = 0;
+      let isTyping = false;
+
+      const getVal = () => {
+        const rot = picker.getAxisRotation ? picker.getAxisRotation() : { rotXDeg: 0, rotYDeg: 0, rotZDeg: 0 };
+        return axis === 'x' ? rot.rotXDeg : axis === 'y' ? rot.rotYDeg : rot.rotZDeg;
+      };
+
+      const setVal = (val) => {
+        const rot = picker.getAxisRotation ? picker.getAxisRotation() : { rotXDeg: 0, rotYDeg: 0, rotZDeg: 0 };
+        const rx = axis === 'x' ? val : rot.rotXDeg;
+        const ry = axis === 'y' ? val : rot.rotYDeg;
+        const rz = axis === 'z' ? val : rot.rotZDeg;
+        if (picker.setAxisRotation) picker.setAxisRotation(rx, ry, rz);
+      };
+
+      const updateBar = (val) => {
+        const norm = Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal)));
+        bar.style.width = (norm * 100) + '%';
+      };
+
+      slider.addEventListener('mousedown', (e) => {
+        if (isTyping) return;
+        isDragging = true;
+        startX = e.clientX;
+        startVal = getVal();
+        document.body.style.cursor = 'ew-resize';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        if (Math.abs(dx) > 1) {
+          const speed = e.shiftKey ? 0.1 : 0.6;
+          const newVal = Math.round((startVal + dx * speed) * 10) / 10;
+          setVal(newVal);
+          input.value = newVal.toFixed(1) + '°';
+          updateBar(newVal);
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          document.body.style.cursor = 'default';
+        }
+      });
+
+      input.addEventListener('focus', () => {
+        isTyping = true;
+        input.value = getVal().toFixed(1);
+        input.select();
+      });
+
+      input.addEventListener('blur', () => {
+        isTyping = false;
+        const v = parseFloat(input.value) || 0;
+        setVal(v);
+        input.value = v.toFixed(1) + '°';
+        updateBar(v);
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          input.blur();
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          const step = e.shiftKey ? 0.1 : 1.0;
+          const delta = e.key === 'ArrowUp' ? step : -step;
+          const v = Math.round((parseFloat(input.value || 0) + delta) * 10) / 10;
+          input.value = v.toFixed(1);
+          setVal(v);
+          updateBar(v);
+        }
+      });
+
+      return {
+        update: () => {
+          if (!isTyping && !isDragging) {
+            const v = getVal();
+            input.value = v.toFixed(1) + '°';
+            updateBar(v);
+          }
+        }
+      };
+    };
+
+    // ── Generic Blender Slider Component ──
+    const makeGenericSlider = (sliderId, inputId, getFn, setFn, minVal, maxVal, unit = '', stepPrecision = 2) => {
+      const slider = document.getElementById(sliderId);
+      const input = document.getElementById(inputId);
+      const bar = slider.querySelector('.bar');
+      let isDragging = false;
+      let startX = 0;
+      let startVal = 0;
+      let isTyping = false;
+
+      const updateBar = (val) => {
+        const norm = Math.max(0, Math.min(1, (val - minVal) / (maxVal - minVal)));
+        bar.style.width = (norm * 100) + '%';
+      };
+
+      slider.addEventListener('mousedown', (e) => {
+        if (isTyping) return;
+        isDragging = true;
+        startX = e.clientX;
+        startVal = getFn();
+        document.body.style.cursor = 'ew-resize';
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - startX;
+        if (Math.abs(dx) > 1) {
+          const speed = e.shiftKey ? 0.002 : 0.01;
+          const newVal = Math.max(minVal, Math.min(maxVal, parseFloat((startVal + dx * speed).toFixed(stepPrecision))));
+          setFn(newVal);
+          input.value = newVal.toFixed(stepPrecision) + unit;
+          updateBar(newVal);
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          document.body.style.cursor = 'default';
+        }
+      });
+
+      input.addEventListener('focus', () => {
+        isTyping = true;
+        input.value = getFn().toFixed(stepPrecision);
+        input.select();
+      });
+
+      input.addEventListener('blur', () => {
+        isTyping = false;
+        const v = Math.max(minVal, Math.min(maxVal, parseFloat(input.value) || minVal));
+        setFn(v);
+        input.value = v.toFixed(stepPrecision) + unit;
+        updateBar(v);
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') input.blur();
+      });
+
+      return {
+        update: () => {
+          if (!isTyping && !isDragging) {
+            const v = getFn();
+            input.value = v.toFixed(stepPrecision) + unit;
+            updateBar(v);
+          }
+        }
+      };
+    };
+
+    const sZoom = makeGenericSlider('slider-zoom', 'v-zoom', () => picker.getZoom ? picker.getZoom() : 1.0, (v) => { if (picker.setZoom) picker.setZoom(v); }, 0.2, 2.5, 'x', 2);
+    const sScale = makeGenericSlider('slider-scale', 'v-scale', () => picker.getDimensions ? picker.getDimensions().sizeX : 1.0, (v) => { if (picker.setDimensions) picker.setDimensions(v, v, v); }, 0.2, 2.0, '', 2);
+
+    const sX = initBlenderSlider('slider-rot-x', 'v-rot-x', 'x', -180, 180);
+    const sY = initBlenderSlider('slider-rot-y', 'v-rot-y', 'y', -180, 180);
+    const sZ = initBlenderSlider('slider-rot-z', 'v-rot-z', 'z', -180, 180);
+
+    const updateLoop = () => {
+      sX.update();
+      sY.update();
+      sZ.update();
+      sZoom.update();
+      sScale.update();
+      sEdgeW.update();
+      requestAnimationFrame(updateLoop);
+    };
+    requestAnimationFrame(updateLoop);
+
     // 两卡等高（以内容较高者为准，内容自适应不截断）
     const syncHeights = () => {
       const a = document.getElementById('current-card');

@@ -1,57 +1,98 @@
-import type { Vec2, Vec3, ColorMode, RGBColor } from './types';
-import { AXIS_LABELS } from './types';
-import { faceColor, valuesToRgb, rgbToHex } from './color-math';
+import type { Vec2, Vec3, ColorMode, RGBColor, GuideVisibility, EdgeStyleConfig } from './types';
+import { DEFAULT_GUIDES, DEFAULT_EDGE_CONFIG } from './types';
+import { faceColor, valuesToRgb } from './color-math';
+import { CameraConfig, BoxConfig, DEFAULT_CAMERA_CONFIG, DEFAULT_BOX_CONFIG, project3D, transform3D } from './camera-math';
+import { drawGuides } from './guide-renderer';
 
-const ISO_ANGLE = Math.PI / 6; // 30°
-const COS30 = Math.cos(ISO_ANGLE);
-const SIN30 = Math.sin(ISO_ANGLE);
+export { CameraConfig, BoxConfig, DEFAULT_CAMERA_CONFIG, DEFAULT_BOX_CONFIG };
 
 /** Project a 3D point to 2D screen coordinates. */
 let invertMode = false;
 /** 切换整个立方体的颜色翻转（所有面渐变取反，白↔黑） */
 export function setBoxInvert(v: boolean): void { invertMode = v; }
 
-// ── 视角旋转 ──
-// 默认视角 yaw=-40°/pitch=25°：可见面 = z=0（黑红黄绿）+ x=1/y=1（含白）→ 黑白顶点同时可见
-let viewYaw = -40 * Math.PI / 180;
-let viewPitch = 25 * Math.PI / 180;
-export function setViewRotation(yaw: number, pitch: number): void { viewYaw = yaw; viewPitch = pitch; }
-export function getViewRotation(): { yaw: number; pitch: number } { return { yaw: viewYaw, pitch: viewPitch }; }
-export function resetViewRotation(): void { viewYaw = 0; viewPitch = 0; }
+// ── 独立相机与立方体几何参数 ──
+let activeCamera: CameraConfig = { ...DEFAULT_CAMERA_CONFIG };
+let activeBox: BoxConfig = { ...DEFAULT_BOX_CONFIG };
 
-/** 方向向量旋转（无中心偏移，用于法线等） */
-function rotDir(d: Vec3): Vec3 {
-  if (viewYaw === 0 && viewPitch === 0) return d;
-  const cy = Math.cos(viewYaw), sy = Math.sin(viewYaw);
-  const cx = Math.cos(viewPitch), sx = Math.sin(viewPitch);
-  const x = d.x * cy + d.z * sy;
-  const y = d.y;
-  const z = -d.x * sy + d.z * cy;
-  const y2 = y * cx - z * sx;
-  const z2 = y * sx + z * cx;
-  return { x, y: y2, z: z2 };
+export function setCameraConfig(cam: Partial<CameraConfig>): void { activeCamera = { ...activeCamera, ...cam }; }
+export function getCameraConfig(): CameraConfig { return { ...activeCamera }; }
+
+export function setBoxGeometry(box: Partial<BoxConfig>): void { activeBox = { ...activeBox, ...box }; }
+export function getBoxGeometry(): BoxConfig { return { ...activeBox }; }
+
+export function setViewRotation(yaw: number, pitch: number): void {
+  activeCamera.rotZRad = -30 * (Math.PI / 180) + yaw;
+  activeCamera.rotXRad = 20 * (Math.PI / 180) + pitch;
 }
 
-/** 视角旋转后的 3D 坐标（0,0 视角 = 恒等） */
-function rotPoint(p: Vec3): Vec3 {
-  if (viewYaw === 0 && viewPitch === 0) return p;
-  const v = { x: p.x - 0.5, y: p.y - 0.5, z: p.z - 0.5 };
-  const cy = Math.cos(viewYaw), sy = Math.sin(viewYaw);
-  const cx = Math.cos(viewPitch), sx = Math.sin(viewPitch);
-  const x = v.x * cy + v.z * sy;
-  const y = v.y;
-  const z = -v.x * sy + v.z * cy;
-  const y2 = y * cx - z * sx;
-  const z2 = y * sx + z * cx;
-  return { x: x + 0.5, y: y2 + 0.5, z: z2 + 0.5 };
+export function getViewRotation(): { yaw: number; pitch: number } {
+  return {
+    yaw: activeCamera.rotZRad - (-30 * (Math.PI / 180)),
+    pitch: activeCamera.rotXRad - (20 * (Math.PI / 180)),
+  };
+}
+
+export function resetViewRotation(): void {
+  activeCamera.rotXRad = 20 * (Math.PI / 180);
+  activeCamera.rotYRad = 0;
+  activeCamera.rotZRad = -30 * (Math.PI / 180);
+}
+
+export function getEulerRotation(): { rotX: number; rotY: number; rotZ: number } {
+  return { rotX: activeCamera.rotXRad, rotY: activeCamera.rotYRad, rotZ: activeCamera.rotZRad };
+}
+
+export function setEulerRotation(rxRad: number, ryRad: number, rzRad: number): void {
+  activeCamera.rotXRad = rxRad;
+  activeCamera.rotYRad = ryRad;
+  activeCamera.rotZRad = rzRad;
+}
+
+export function getRotationDeg(): { rotXDeg: number; rotYDeg: number; rotZDeg: number } {
+  return {
+    rotXDeg: Math.round((activeCamera.rotXRad * 180 / Math.PI) * 10) / 10,
+    rotYDeg: Math.round((activeCamera.rotYRad * 180 / Math.PI) * 10) / 10,
+    rotZDeg: Math.round((activeCamera.rotZRad * 180 / Math.PI) * 10) / 10,
+  };
+}
+
+export function setRotationDeg(xDeg: number, yDeg: number, zDeg: number): void {
+  activeCamera.rotXRad = (xDeg * Math.PI) / 180;
+  activeCamera.rotYRad = (yDeg * Math.PI) / 180;
+  activeCamera.rotZRad = (zDeg * Math.PI) / 180;
+}
+
+export function getCameraAnglesDeg(): { yawDeg: number; pitchDeg: number } {
+  return {
+    yawDeg: Math.round((activeCamera.rotZRad * 180 / Math.PI) * 10) / 10,
+    pitchDeg: Math.round((activeCamera.rotXRad * 180 / Math.PI) * 10) / 10,
+  };
+}
+
+export function setCameraAnglesDeg(yawDeg: number, pitchDeg: number): void {
+  activeCamera.rotZRad = (yawDeg * Math.PI) / 180;
+  activeCamera.rotXRad = (pitchDeg * Math.PI) / 180;
+}
+
+export function setZoomMultiplier(z: number): void { activeCamera.zoom = Math.max(0.1, Math.min(3.0, z)); }
+export function getZoomMultiplier(): number { return activeCamera.zoom; }
+
+export function setBoxDimensions(x: number, y: number, z: number): void {
+  activeBox.sizeX = Math.max(0.1, Math.min(2.5, x));
+  activeBox.sizeY = Math.max(0.1, Math.min(2.5, y));
+  activeBox.sizeZ = Math.max(0.1, Math.min(2.5, z));
+}
+export function getBoxDimensions(): { sizeX: number; sizeY: number; sizeZ: number } {
+  return { sizeX: activeBox.sizeX, sizeY: activeBox.sizeY, sizeZ: activeBox.sizeZ };
 }
 
 export function project(p: Vec3, scale: number, center: Vec2): Vec2 {
-  const q = rotPoint(p);
-  return {
-    x: center.x + (q.y - q.x) * COS30 * scale,
-    y: center.y + q.z * scale - (q.x + q.y) * SIN30 * scale,
-  };
+  return project3D(p, scale, center, activeCamera, activeBox);
+}
+
+function cameraTransform(p: Vec3): Vec3 {
+  return transform3D(p, activeCamera, activeBox);
 }
 
 function boxVertices(ext: Vec3): Vec3[] {
@@ -71,26 +112,22 @@ function boxVertices(ext: Vec3): Vec3[] {
 export interface FaceDef {
   quad: [number, number, number, number];
   fixedAxis: number;
+  fixedValue: number;
   uAxis: number;
   vAxis: number;
-  /** 外法线（用于旋转后的正/背面判定；不依赖 quad 顺序，渐变方向不受影响） */
   normal: Vec3;
 }
 
 export const FACES: FaceDef[] = [
-  // Top face — z fixed (1), varying x and y
-  { quad: [3, 5, 7, 6], fixedAxis: 2, uAxis: 0, vAxis: 1, normal: { x: 0, y: 0, z: 1 } },
-  // Right face — x fixed (1), varying y and z
-  { quad: [1, 4, 7, 5], fixedAxis: 0, uAxis: 1, vAxis: 2, normal: { x: 1, y: 0, z: 0 } },
-  // Left face — y fixed (1), varying x and z
-  { quad: [2, 4, 7, 6], fixedAxis: 1, uAxis: 0, vAxis: 2, normal: { x: 0, y: 1, z: 0 } },
-  // Back faces（旋转后可见）
-  { quad: [0, 2, 4, 1], fixedAxis: 2, uAxis: 1, vAxis: 0, normal: { x: 0, y: 0, z: -1 } }, // bottom — z fixed (0)
-  { quad: [0, 3, 6, 2], fixedAxis: 0, uAxis: 2, vAxis: 1, normal: { x: -1, y: 0, z: 0 } }, // back-left — x fixed (0)
-  { quad: [0, 1, 5, 3], fixedAxis: 1, uAxis: 0, vAxis: 2, normal: { x: 0, y: -1, z: 0 } }, // back-right — y fixed (0)
+  { quad: [3, 5, 7, 6], fixedAxis: 2, fixedValue: 1, uAxis: 0, vAxis: 1, normal: { x: 0, y: 0, z: 1 } },
+  { quad: [1, 4, 7, 5], fixedAxis: 0, fixedValue: 1, uAxis: 1, vAxis: 2, normal: { x: 1, y: 0, z: 0 } },
+  { quad: [2, 4, 7, 6], fixedAxis: 1, fixedValue: 1, uAxis: 0, vAxis: 2, normal: { x: 0, y: 1, z: 0 } },
+  { quad: [0, 1, 4, 2], fixedAxis: 2, fixedValue: 0, uAxis: 0, vAxis: 1, normal: { x: 0, y: 0, z: -1 } },
+  { quad: [0, 2, 6, 3], fixedAxis: 0, fixedValue: 0, uAxis: 1, vAxis: 2, normal: { x: -1, y: 0, z: 0 } },
+  { quad: [0, 1, 5, 3], fixedAxis: 1, fixedValue: 0, uAxis: 0, vAxis: 2, normal: { x: 0, y: -1, z: 0 } },
 ];
 
-const FACE_RES = 64; // 128→64: 逐像素渐变计算量降为 1/4，300px 画布经 drawImage 平滑放大，视觉无感知
+const FACE_RES = 64;
 
 export interface RenderContext {
   ctx: CanvasRenderingContext2D;
@@ -102,7 +139,6 @@ export interface RenderContext {
 
 export interface RenderState {
   alphaMode: boolean;
-  /** 旋转立方体（旋钮调饱和度）进行中 */
   viewRotating: boolean;
   hoveredAxisHandle: number;
   draggingAxisHandle: number;
@@ -122,27 +158,91 @@ export const DEFAULT_RENDER_STATE: RenderState = {
 export function createRenderContext(canvas: HTMLCanvasElement, viewportSize: number): RenderContext {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = viewportSize * dpr;
-  canvas.height = viewportSize * 0.84 * dpr; // 投影 0.64×viewport，顶部/底部预留标签与投影空间
+  canvas.height = viewportSize * 1.0 * dpr;
   canvas.style.width = `${viewportSize}px`;
-  canvas.style.height = `${viewportSize * 0.84}px`;
+  canvas.style.height = `${viewportSize * 1.0}px`;
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
 
   return {
     ctx,
-    scale: viewportSize * 0.32,
-    center: { x: viewportSize / 2, y: viewportSize * 0.4 },
+    scale: viewportSize * 0.26,
+    center: { x: viewportSize / 2, y: viewportSize * 0.5 },
     width: viewportSize,
-    height: viewportSize * 0.84,
+    height: viewportSize * 1.0,
   };
 }
 
+let activeEdgeStyle: EdgeStyleConfig = { ...DEFAULT_EDGE_CONFIG };
+
+export function setEdgeStyle(style: Partial<EdgeStyleConfig>): void {
+  activeEdgeStyle = { ...activeEdgeStyle, ...style };
+}
+
+export function getEdgeStyle(): EdgeStyleConfig {
+  return { ...activeEdgeStyle };
+}
+
+// 12条边线在顶点中的索引对 (0: 000, 1: 100, 2: 010, 3: 001, 4: 110, 5: 101, 6: 011, 7: 111)
+const ALL_12_EDGES: [number, number][] = [
+  // 底面 4 条边 (z=0)
+  [0, 1], [1, 4], [4, 2], [2, 0],
+  // 顶面 4 条边 (z=1)
+  [3, 5], [5, 7], [7, 6], [6, 3],
+  // 纵向 4 条立柱边
+  [0, 3], [1, 5], [4, 7], [2, 6],
+];
+
 /**
- * Render the box.
- *
- * @param boxExtent  The box size along each axis (0–1), set by axis handles.
- * @param dotValues   The selected color (0–1 per axis), determines dot position.
- * @param dotFace     Which face the dot is on (0/1/2), or -1 for none.
+ * 绘制立方体 12 条棱边
+ */
+function draw12CubeEdges(
+  ctx: CanvasRenderingContext2D,
+  verts2d: Vec2[],
+  verts3: Vec3[],
+  style: EdgeStyleConfig,
+): void {
+  if (!style.showVisible && !style.showHidden) return;
+
+  ctx.save();
+  ctx.lineWidth = style.width;
+  if (style.dashed) ctx.setLineDash([4, 3]);
+  else ctx.setLineDash([]);
+
+  // 计算每条边的深度及是否面向视点
+  for (const [a, b] of ALL_12_EDGES) {
+    const vA = verts2d[a];
+    const vB = verts2d[b];
+    const mid3: Vec3 = {
+      x: (verts3[a].x + verts3[b].x) * 0.5,
+      y: (verts3[a].y + verts3[b].y) * 0.5,
+      z: (verts3[a].z + verts3[b].z) * 0.5,
+    };
+    const camMid = cameraTransform(mid3);
+    const isFront = camMid.z <= 0; // 相机正前方/前侧边
+
+    if (isFront && style.showVisible) {
+      ctx.strokeStyle = style.color;
+      ctx.globalAlpha = style.opacity;
+      ctx.beginPath();
+      ctx.moveTo(vA.x, vA.y);
+      ctx.lineTo(vB.x, vB.y);
+      ctx.stroke();
+    } else if (!isFront && style.showHidden) {
+      ctx.strokeStyle = style.color;
+      ctx.globalAlpha = style.opacity * 0.45; // 暗部背部透视边
+      ctx.beginPath();
+      ctx.moveTo(vA.x, vA.y);
+      ctx.lineTo(vB.x, vB.y);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
+/**
+ * 纯粹的渲染管线：立方体面绘制与辅助线绘制清晰解耦
  */
 export function render(
   rc: RenderContext,
@@ -151,7 +251,7 @@ export function render(
   dotFace: number,
   mode: ColorMode,
   rs: RenderState,
-  showLabels = true,
+  guides: boolean | GuideVisibility = true,
   alphaRing: { active: boolean; alpha: number; rgb: RGBColor } | null = null,
 ): void {
   const { ctx, scale, center, width, height } = rc;
@@ -161,8 +261,7 @@ export function render(
   const verts3 = boxVertices(boxExtent);
   const verts2d = verts3.map(v => project(v, scale, center));
 
-  drawAxisLines(ctx, scale, center, mode);
-  // 边框阴影：贴合立方体外轮廓的柔和阴影（类似 CSS box-shadow 贴元素）
+  // 1. 绘制 3D 色彩立方体面
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,0.35)';
   ctx.shadowBlur = 8;
@@ -170,80 +269,27 @@ export function render(
   ctx.shadowOffsetY = 2;
   drawFaces(ctx, verts2d, verts3, boxExtent, mode, rs.viewRotating);
   ctx.restore();
-  // 旋转时隐藏顶点字母标签（旋转是空间操作，标签只属于默认视角）
-  if (showLabels && !rs.viewRotating) drawAxisLabels(ctx, mode, scale, center);
-  // 黑白端点圆点：白点（dot 为白时即其位置）的体对角线另一端 = 黑点，始终标出
-  if (rs.viewRotating) {
-    const pO = project({ x: 0, y: 0, z: 0 }, scale, center);
-    const pW = project({ x: 1, y: 1, z: 1 }, scale, center);
-    ctx.beginPath(); ctx.arc(pO.x, pO.y, 7, 0, Math.PI * 2); ctx.fillStyle = '#000'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 1.5; ctx.stroke();
-    ctx.beginPath(); ctx.arc(pW.x, pW.y, 7, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.55)'; ctx.lineWidth = 1.2; ctx.stroke();
-    ctx.font = '9px monospace';
-    ctx.fillStyle = 'rgba(51,65,85,.85)';
-    ctx.textAlign = 'left';
-    ctx.fillText('0', pO.x + 10, pO.y + 12);
-    ctx.fillText('255,255,255', pW.x + 10, pW.y + 12);
-  }
-  // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
-  // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
-  // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
 
-  // Draw the color dot on the face
+  // 2. 绘制 12 条棱边（高可配置）
+  draw12CubeEdges(ctx, verts2d, verts3, activeEdgeStyle);
+
+  // 3. 绘制辅助参考线（解耦独立模块 guide-renderer）
+  const g: GuideVisibility = typeof guides === 'boolean'
+    ? (guides ? DEFAULT_GUIDES : { vertexX: false, vertexY: false, vertexZ: false, centerX: false, centerY: false, centerZ: false, yawArc: false, pitchArc: false })
+    : guides;
+
+  drawGuides(ctx, scale, center, activeCamera, activeBox, g);
+
+  // 4. 绘制取色点
   if (dotFace >= 0) {
     const rgb = valuesToRgb(dotValues, mode);
-    const dotRgb = invertMode ? { r: 255 - rgb.r, g: 255 - rgb.g, b: 255 - rgb.b } : rgb; // 内芯 = 该位置反转布局下的色值（与色块/数值一致）
+    const dotRgb = invertMode ? { r: 255 - rgb.r, g: 255 - rgb.g, b: 255 - rgb.b } : rgb;
     const dotPos = project(dotValues, scale, center);
-  if (alphaRing && alphaRing.active) drawAlphaRing(ctx, dotPos, alphaRing.rgb, alphaRing.alpha);
+    if (alphaRing && alphaRing.active) drawAlphaRing(ctx, dotPos, alphaRing.rgb, alphaRing.alpha);
     drawColorDot(ctx, dotPos, dotRgb);
   }
 
   ctx.restore();
-}
-
-// ── Axis lines ────────────────────────────────────────────────────────────
-
-const AXIS_COLORS: Record<ColorMode, [string, string, string]> = {
-  rgb: ['rgba(255,100,100,0.4)', 'rgba(100,255,100,0.4)', 'rgba(100,150,255,0.4)'],
-  hsb: ['rgba(255,100,100,0.4)', 'rgba(100,255,100,0.4)', 'rgba(100,150,255,0.4)'],
-  oklch: ['rgba(220,220,220,0.4)', 'rgba(255,180,60,0.4)', 'rgba(180,120,255,0.4)'],
-};
-
-const HANDLE_COLORS: Record<ColorMode, [string, string, string]> = {
-  rgb: ['rgba(255,100,100,0.9)', 'rgba(100,255,100,0.9)', 'rgba(100,150,255,0.9)'],
-  hsb: ['rgba(255,100,100,0.9)', 'rgba(100,255,100,0.9)', 'rgba(100,150,255,0.9)'],
-  oklch: ['rgba(220,220,220,0.9)', 'rgba(255,180,60,0.9)', 'rgba(180,120,255,0.9)'],
-};
-
-function drawAxisLines(ctx: CanvasRenderingContext2D, scale: number, center: Vec2, mode: ColorMode): void {
-  const origin = project({ x: 0, y: 0, z: 0 }, scale, center);
-  const tips = [
-    project({ x: 1, y: 0, z: 0 }, scale, center),
-    project({ x: 0, y: 1, z: 0 }, scale, center),
-    project({ x: 0, y: 0, z: 1 }, scale, center),
-  ];
-  const colors = AXIS_COLORS[mode];
-  ctx.lineWidth = 1.5;
-  for (let i = 0; i < tips.length; i++) {
-    ctx.beginPath();
-    ctx.moveTo(origin.x, origin.y);
-    ctx.lineTo(tips[i].x, tips[i].y);
-    ctx.strokeStyle = colors[i];
-    ctx.stroke();
-  }
-}
-
-// ── Back edges ────────────────────────────────────────────────────────────
-
-function drawBackEdges(ctx: CanvasRenderingContext2D, v: Vec2[]): void {
-  const edges: [number, number][] = [[1, 3], [2, 3], [1, 2]];
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-  ctx.lineWidth = 1;
-  for (const [a, b] of edges) {
-    ctx.beginPath();
-    ctx.moveTo(v[a].x, v[a].y);
-    ctx.lineTo(v[b].x, v[b].y);
-    ctx.stroke();
-  }
 }
 
 // ── Faces ─────────────────────────────────────────────────────────────────
@@ -258,28 +304,66 @@ function drawFaces(
 ): void {
   const ext = [boxExtent.x, boxExtent.y, boxExtent.z];
 
+  const visibleFaces: {
+    face: FaceDef;
+    corners: Vec2[];
+    fixedVal: number;
+    uMax: number;
+    vMax: number;
+    depth: number;
+  }[] = [];
+
   for (let fi = 0; fi < FACES.length; fi++) {
     const face = FACES[fi];
-    const fixedVal = ext[face.fixedAxis];
+    const fixedVal = face.fixedValue * ext[face.fixedAxis];
     const uMax = ext[face.uAxis];
     const vMax = ext[face.vAxis];
     if (uMax < 0.002 && vMax < 0.002) continue;
 
-    // 旋转后法线 → 正/背面判定（观察者在 (1,1,1) 方向）
-    const n = rotDir(face.normal);
-    const front = n.x + n.y + n.z > 0;
+    // 面中心转换到相机空间
+    const center3: Vec3 = { x: 0, y: 0, z: 0 };
+    const keys: (keyof Vec3)[] = ['x', 'y', 'z'];
+    (center3 as any)[keys[face.fixedAxis]] = fixedVal;
+    (center3 as any)[keys[face.uAxis]] = uMax * 0.5;
+    (center3 as any)[keys[face.vAxis]] = vMax * 0.5;
+    const camCenter = cameraTransform(center3);
 
-    const corners = face.quad.map(i => verts2d[i]);
-    if (front) {
-      // 正面：完整渐变填充（颜色始终正确）
-      renderFaceGradient(ctx, corners, face.fixedAxis, fixedVal, uMax, vMax, mode);
-    } else {
-      // 背面：同款渐变但淡色（旋转时立方体保持实体，颜色语义不变）
-      ctx.save();
-      ctx.globalAlpha = 0; // 背面不画：立方体不透明实体渲染（凸体自然遮挡）
-      renderFaceGradient(ctx, corners, face.fixedAxis, fixedVal, uMax, vMax, mode);
-      ctx.restore();
+    // 面法线转换到相机空间：外法线如果朝向相机（Z < 0 或 dot(normal, camCenter) > 0）
+    const normEnd: Vec3 = {
+      x: center3.x + face.normal.x * 0.1,
+      y: center3.y + face.normal.y * 0.1,
+      z: center3.z + face.normal.z * 0.1,
+    };
+    const camNormEnd = cameraTransform(normEnd);
+    const camNormZ = camNormEnd.z - camCenter.z;
+
+    // 在正交相机下，面向相机的面其外法线满足 camNormZ < 0 (朝向视点)
+    if (camNormZ < 0) {
+      const corners = face.quad.map(i => verts2d[i]);
+      visibleFaces.push({
+        face,
+        corners,
+        fixedVal,
+        uMax,
+        vMax,
+        depth: camCenter.z,
+      });
     }
+  }
+
+  // 从远到近排序绘制
+  visibleFaces.sort((a, b) => b.depth - a.depth);
+
+  for (const item of visibleFaces) {
+    renderFaceGradient(
+      ctx,
+      item.corners,
+      item.face.fixedAxis,
+      item.fixedVal,
+      item.uMax,
+      item.vMax,
+      mode,
+    );
   }
 }
 
@@ -314,6 +398,11 @@ function renderFaceGradient(
   }
   offCtx.putImageData(imgData, 0, 0);
 
+  // corners 顺序严格对应:
+  // corners[0] = (u=0, v=0)
+  // corners[1] = (u=1, v=0)
+  // corners[2] = (u=1, v=1)
+  // corners[3] = (u=0, v=1)
   const p00 = corners[0];
   const p10 = corners[1];
   const p11 = corners[2];
@@ -379,42 +468,7 @@ function drawFrontEdges(ctx: CanvasRenderingContext2D, v: Vec2[]): void {
 
 // ── Labels ────────────────────────────────────────────────────────────────
 
-function drawAxisLabels(ctx: CanvasRenderingContext2D, mode: ColorMode, scale: number, center: Vec2): void {
-  const labels = AXIS_LABELS[mode];
-  const positions = invertMode
-    ? [
-        project({ x: 0, y: 1, z: 1 }, scale, center), // 反转后红色出现在原青区（右下）：R 文本跟随
-        project({ x: 1, y: 0, z: 1 }, scale, center), // 反转后绿色出现在原品红区（左下）：G 文本跟随
-        project({ x: 1, y: 1, z: 0 }, scale, center), // 反转后蓝色出现在原黄区（顶部）：B 文本跟随
-      ]
-    : [
-        project({ x: 1, y: 0, z: 0 }, scale, center),
-        project({ x: 0, y: 1, z: 0 }, scale, center),
-        project({ x: 0, y: 0, z: 1 }, scale, center),
-      ];
-  const offsets: Vec2[] = invertMode
-    ? [{ x: 14, y: 6 }, { x: -14, y: 6 }, { x: 0, y: -10 }]
-    : [{ x: -16, y: -6 }, { x: 16, y: -6 }, { x: 0, y: 12 }];
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  // 文字阴影（柔和投影）
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,0.35)';
-  ctx.shadowBlur = 3;
-  ctx.shadowOffsetX = 1;
-  ctx.shadowOffsetY = 1;
-  // 顶点字母：统一灰色加粗，固定绘制（不跟随顶点颜色）
-  for (let i = 0; i < 3; i++) {
-    const tx = positions[i].x + offsets[i].x;
-    const ty = positions[i].y + offsets[i].y;
-    ctx.globalAlpha = 0.9;
-    ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillStyle = '#888888';
-    ctx.fillText(labels[i], tx, ty);
-  }
-  ctx.globalAlpha = 1;
-  ctx.restore();
-}
+
 
 // ── Axis handles ──────────────────────────────────────────────────────────
 
@@ -593,7 +647,7 @@ export function faceHitTest(
   // Face origin in 3D: the corner where both varying axes are 0
   const faceOrigin: Vec3 = { x: 0, y: 0, z: 0 };
   const keys: (keyof Vec3)[] = ['x', 'y', 'z'];
-  (faceOrigin as any)[keys[face.fixedAxis]] = ext[face.fixedAxis];
+  (faceOrigin as any)[keys[face.fixedAxis]] = face.fixedValue * ext[face.fixedAxis];
 
   // Basis vectors spanning the face (in 3D, scaled to boxExtent)
   const uEnd: Vec3 = { ...faceOrigin };
@@ -648,7 +702,7 @@ export function faceHitTestUnclamped(
 
   const faceOrigin: Vec3 = { x: 0, y: 0, z: 0 };
   const keys: (keyof Vec3)[] = ['x', 'y', 'z'];
-  (faceOrigin as any)[keys[face.fixedAxis]] = ext[face.fixedAxis];
+  (faceOrigin as any)[keys[face.fixedAxis]] = face.fixedValue * ext[face.fixedAxis];
 
   const uEnd: Vec3 = { ...faceOrigin };
   (uEnd as any)[keys[face.uAxis]] = uMax;

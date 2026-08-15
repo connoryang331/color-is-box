@@ -41,13 +41,14 @@ export function createInteraction(
     const rect = canvas.getBoundingClientRect();
     return { x: e.clientX - rect.left, y: e.clientY - rect.top };
   }
-  // ── Alpha ring state machine ──────────────────────────────────────────
+  // ── Alpha ring & Dot rotation state machine ──────────────────────────
   let alphaDragging = false;
+  let dotRotating = false; // 按住指示器旋转立方体
   let mouseDownActive = false; // 按住不松手：长按弹环后可直接移入环带操作
   let touchActive = false;
-  let viewDragging = false; // 旋转立方体（旋钮调饱和度）
+  let viewDragging = false; // 旋转立方体
   let viewLastPt: Vec2 | null = null;
-  const ROTATE_PRESS_MS = 600; // 任意位置长按进入旋转模式（与 alpha 长按同语言；dot 上长按仍是 alpha）
+  const ROTATE_PRESS_MS = 600; // 任意位置长按进入旋转模式
   let rotatePressTimer: ReturnType<typeof setTimeout> | null = null;
   function startRotatePress(): void {
     cancelRotatePress();
@@ -58,7 +59,7 @@ export function createInteraction(
   }
   function enterRotateMode(): void {
     rotatePressTimer = null;
-    state.alphaMode = false; // 关闭 alpha 环（屏幕空间正圆会与旋转中的立方体穿插）
+    state.alphaMode = false; // 关闭 alpha 环
     endFaceDrag();
     endAxisDrag();
     viewDragging = true;
@@ -66,8 +67,8 @@ export function createInteraction(
     viewLastPt = null; // 由下一次 move 建立基准
     requestRender();
   }
-  const DOT_HIT_R = 9;
-  const LONG_PRESS_MS = 1000; // 按压 1 秒进入 alpha 模式（双击反转不受影响：快速 up 即取消）
+  const DOT_HIT_R = 14; // 指示器触摸/点击检测半径
+  const LONG_PRESS_MS = 800; // 按压进入 alpha 模式
   let longPressTimer: ReturnType<typeof setTimeout> | null = null;
   function startLongPress(): void {
     cancelLongPress();
@@ -82,6 +83,7 @@ export function createInteraction(
     state.alphaMode = true;
     endAxisDrag();
     endFaceDrag(); // 结束进行中的选色拖拽，锁定 dot
+    dotRotating = false;
     requestRender();
   }
 
@@ -294,7 +296,7 @@ export function createInteraction(
     const newDot: Vec3 = { ...getDotValues() };
     (newDot as any)[keys[face.uAxis]] = s * ext[keys[face.uAxis]];
     (newDot as any)[keys[face.vAxis]] = t * ext[keys[face.vAxis]];
-    (newDot as any)[keys[face.fixedAxis]] = ext[keys[face.fixedAxis]];
+    (newDot as any)[keys[face.fixedAxis]] = face.fixedValue * ext[keys[face.fixedAxis]];
 
     setDotValues(newDot, faceIndex);
   }
@@ -309,15 +311,22 @@ export function createInteraction(
 
   // ── Mouse events ──────────────────────────────────────────────────────
 
+  let dragStartPt: Vec2 | null = null;
+  let hasMoved = false;
+  let pendingFaceClick: { faceIndex: number; s: number; t: number } | null = null;
+
   function onMouseDown(e: MouseEvent): void {
     mouseDownActive = true;
     const pt = canvasPoint(e);
+    dragStartPt = pt;
+    hasMoved = false;
+    pendingFaceClick = null;
 
-    // Alpha ring 状态机（仅启用 alpha 的模型生效）
+    // Alpha ring 状态机
     if (alphaEnabled()) {
       if (state.alphaMode) {
         if (distToDot(pt) <= DOT_HIT_R) {
-          state.alphaMode = false; // 再按圆点：关闭
+          state.alphaMode = false;
           requestRender();
           return;
         }
@@ -327,40 +336,25 @@ export function createInteraction(
           applyAlphaFromPoint(pt);
           return;
         }
-        state.alphaMode = false; // 点环外：关闭
+        state.alphaMode = false;
         requestRender();
         return;
       }
-      if (distToDot(pt) <= DOT_HIT_R) {
-        startLongPress(); // 长按 1 秒开环；短按/拖动照常走 face 拖拽
-      }
     }
 
-    const axisHit = hitTestAxisHandle(pt);
-    if (axisHit >= 0) {
-      e.preventDefault();
-      startAxisDrag(axisHit, pt);
-      return;
-    }
-
+    // 检查是否点在某个面上（记录待选色，若拖动则转为旋转）
     const faceHit = hitTestFace(pt);
     if (faceHit) {
-      e.preventDefault();
-      startFaceDrag(faceHit.faceIndex, faceHit.s, faceHit.t, e.shiftKey);
-      // 长按 0.6s 不动 → 转为旋转模式（alpha 环打开时不触发，短按拖动 = 选色）
-      if (!state.alphaMode) startRotatePress();
-      return;
+      pendingFaceClick = { faceIndex: faceHit.faceIndex, s: faceHit.s, t: faceHit.t };
     }
 
-    // 六边形外区域：旋转立方体（拧动调饱和度）
-    const c = getCenter();
-    if (Math.hypot(pt.x - c.x, pt.y - c.y) > getScale() + 20) {
-      e.preventDefault();
-      viewDragging = true;
-      viewLastPt = pt;
-      state.viewRotating = true;
-      requestRender();
-    }
+    // 默认开启全向 3D 旋转交互
+    e.preventDefault();
+    viewDragging = true;
+    viewLastPt = pt;
+    state.viewRotating = true;
+    if (alphaEnabled() && distToDot(pt) <= DOT_HIT_R) startLongPress();
+    requestRender();
   }
 
   function onMouseMove(e: MouseEvent): void {
@@ -372,24 +366,27 @@ export function createInteraction(
       return;
     }
 
-    // 旋转立方体：拧动 → 视角慢转 + 饱和度变化
+    // 旋转立方体：在任意点按下并拖拽均可 3D 旋转
     if (viewDragging) {
       e.preventDefault();
-      if (!viewLastPt) { viewLastPt = pt; return; } // 首帧建立基准（长按进入旋转模式后）
+      if (!viewLastPt) { viewLastPt = pt; return; }
       const dx = pt.x - viewLastPt.x;
       const dy = pt.y - viewLastPt.y;
+      if (Math.hypot(dx, dy) > 2) {
+        hasMoved = true;
+        cancelLongPress();
+      }
       const v = getViewRotation();
       setViewRotation(
-        Math.max(-60, Math.min(60, v.yaw + dx * 0.12)),
-        Math.max(-60, Math.min(60, v.pitch + dy * 0.12)),
+        v.yaw + dx * 0.012,
+        v.pitch + dy * 0.012,
       );
-      if (dx !== 0) onSatChange(Math.max(0, Math.min(1, getSat() + dx * 0.002)));
       viewLastPt = pt;
       requestRender();
       return;
     }
 
-    // 长按弹环后按住不放：鼠标移入环带即开始调 alpha（无需松开再按）
+    // 长按弹环后按住不放：鼠标移入环带即开始调 alpha
     if (mouseDownActive && state.alphaMode && inAlphaRing(pt)) {
       e.preventDefault();
       alphaDragging = true;
@@ -397,51 +394,28 @@ export function createInteraction(
       return;
     }
 
-    if (dragAxis >= 0) {
-      e.preventDefault();
-      applyAxisDrag(pt);
-      return;
-    }
-
-    if (dragFace >= 0) {
-      e.preventDefault();
-      applyFaceDrag(pt, e.shiftKey, e.altKey);
-      return;
-    }
-
-    // Hover
-    const axisHit = hitTestAxisHandle(pt);
-    const faceHit = hitTestFace(pt);
-    const newAxisHover = axisHit;
-    const newFaceHover = axisHit >= 0 ? -1 : (faceHit ? faceHit.faceIndex : -1);
-
-    if (newAxisHover !== state.hoveredAxisHandle || newFaceHover !== state.hoveredFace) {
-      state.hoveredAxisHandle = newAxisHover;
-      state.hoveredFace = newFaceHover;
-      canvas.style.cursor = newAxisHover >= 0 ? 'grab' : newFaceHover >= 0 ? 'crosshair' : 'default';
-      requestRender();
-    }
+    // Hover 光标提示
+    canvas.style.cursor = 'grab';
   }
 
-  function onMouseUp(_e: MouseEvent): void {
+  function onMouseUp(e: MouseEvent): void {
     cancelLongPress();
     mouseDownActive = false;
     alphaDragging = false;
+    dotRotating = false;
+
+    // 如果鼠标未明显移动且点击了面，则执行拾色/选色
+    if (!hasMoved && pendingFaceClick) {
+      applyFaceValues(pendingFaceClick.faceIndex, pendingFaceClick.s, pendingFaceClick.t);
+    }
+
     if (viewDragging) {
       viewDragging = false;
       state.viewRotating = false;
       viewLastPt = null;
       requestRender();
     }
-    const wasDragging = dragAxis >= 0 || dragFace >= 0;
-    endAxisDrag();
-    endFaceDrag();
-    if (wasDragging) {
-      state.hoveredAxisHandle = -1;
-      state.hoveredFace = -1;
-      canvas.style.cursor = 'default';
-      requestRender();
-    }
+    canvas.style.cursor = 'grab';
   }
 
   // ── Touch events ──────────────────────────────────────────────────────
@@ -450,6 +424,8 @@ export function createInteraction(
     if (e.touches.length !== 1) return;
     touchActive = true;
     const pt = canvasPoint(e.touches[0]);
+    hasMoved = false;
+    pendingFaceClick = null;
 
     if (alphaEnabled()) {
       if (state.alphaMode) {
@@ -457,22 +433,19 @@ export function createInteraction(
         if (inAlphaRing(pt)) { e.preventDefault(); alphaDragging = true; applyAlphaFromPoint(pt); return; }
         state.alphaMode = false; requestRender(); return;
       }
-      if (distToDot(pt) <= DOT_HIT_R) { startLongPress(); }
     }
-
-    const axisHit = hitTestAxisHandle(pt);
-    if (axisHit >= 0) { e.preventDefault(); startAxisDrag(axisHit, pt); return; }
 
     const faceHit = hitTestFace(pt);
-    if (faceHit) { e.preventDefault(); startFaceDrag(faceHit.faceIndex, faceHit.s, faceHit.t, false); if (!state.alphaMode) startRotatePress(); return; }
-    const c = getCenter();
-    if (Math.hypot(pt.x - c.x, pt.y - c.y) > getScale() + 20) {
-      e.preventDefault();
-      viewDragging = true;
-      viewLastPt = pt;
-      state.viewRotating = true;
-      requestRender();
+    if (faceHit) {
+      pendingFaceClick = { faceIndex: faceHit.faceIndex, s: faceHit.s, t: faceHit.t };
     }
+
+    e.preventDefault();
+    viewDragging = true;
+    viewLastPt = pt;
+    state.viewRotating = true;
+    if (alphaEnabled() && distToDot(pt) <= DOT_HIT_R) startLongPress();
+    requestRender();
   }
 
   function onTouchMove(e: TouchEvent): void {
@@ -480,34 +453,35 @@ export function createInteraction(
     const pt = canvasPoint(e.touches[0]);
     if (alphaDragging) { e.preventDefault(); applyAlphaFromPoint(pt); }
     else if (touchActive && state.alphaMode && inAlphaRing(pt)) { e.preventDefault(); alphaDragging = true; applyAlphaFromPoint(pt); }
-    else if (dragAxis >= 0) { e.preventDefault(); applyAxisDrag(pt); }
     else if (viewDragging) {
       e.preventDefault();
       if (!viewLastPt) { viewLastPt = pt; return; }
       const dx = pt.x - viewLastPt.x;
       const dy = pt.y - viewLastPt.y;
+      if (Math.hypot(dx, dy) > 2) {
+        hasMoved = true;
+        cancelLongPress();
+      }
       const v = getViewRotation();
-      setViewRotation(Math.max(-60, Math.min(60, v.yaw + dx * 0.12)), Math.max(-60, Math.min(60, v.pitch + dy * 0.12)));
-      if (dx !== 0) onSatChange(Math.max(0, Math.min(1, getSat() + dx * 0.002)));
+      setViewRotation(v.yaw + dx * 0.012, v.pitch + dy * 0.012);
       viewLastPt = pt;
       requestRender();
     }
-    else if (dragFace >= 0) { e.preventDefault(); applyFaceDrag(pt, false, false); }
   }
 
   function onTouchEnd(_e: TouchEvent): void {
     cancelLongPress();
     touchActive = false;
     alphaDragging = false;
+    if (!hasMoved && pendingFaceClick) {
+      applyFaceValues(pendingFaceClick.faceIndex, pendingFaceClick.s, pendingFaceClick.t);
+    }
     if (viewDragging) {
       viewDragging = false;
       state.viewRotating = false;
       viewLastPt = null;
       requestRender();
     }
-    endAxisDrag();
-    endFaceDrag();
-    requestRender();
   }
 
   // ── Keyboard ──────────────────────────────────────────────────────────
