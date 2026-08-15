@@ -516,6 +516,8 @@ export function createInteraction(
     // 视角预设：1 = 白点左上/黑点右下对角视图（灰轴沿屏幕对角线），0 = 回正（灰轴正对）
     if (e.key === '1') { setViewRotation(Math.PI / 4, 0); requestRender(); return; }
     if (e.key === '0') { resetViewRotation(); requestRender(); return; }
+    // 2 = 黑角视图：旋转到含黑面（x=0）朝前的角度，黑顶点可见
+    if (e.key === '2') { setViewRotation(0.95, -0.54); requestRender(); return; }
     if (state.alphaMode) {
       if (e.key === 'Escape') { state.alphaMode = false; requestRender(); return; }
       if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {

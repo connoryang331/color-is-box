@@ -261,7 +261,7 @@ function drawFaces(
     } else {
       // 背面：同款渐变但淡色（旋转时立方体保持实体，颜色语义不变）
       ctx.save();
-      ctx.globalAlpha = rotating ? 0.28 : 0;
+      ctx.globalAlpha = rotating ? 0.5 : 0; // 背面半透明（含黑的面清晰可辨）
       renderFaceGradient(ctx, corners, face.fixedAxis, fixedVal, uMax, vMax, mode);
       ctx.restore();
     }
