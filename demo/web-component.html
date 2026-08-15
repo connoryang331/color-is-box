@@ -31,15 +31,15 @@
   </div>
   <div class="row" style="margin-top:24px">
     <div class="panel">
-      <h3>&lt;rgb-color-is-box&gt; (value: 255, 0, 0)</h3>
+      <h3>&lt;rgb-color-is-box&gt; <span class="model-value">(value: 255, 0, 0)</span></h3>
       <rgb-color-is-box id="picker2" value="255, 0, 0" size="300"></rgb-color-is-box>
     </div>
     <div class="panel">
-      <h3>&lt;hsl-color-is-box&gt; (value: 200, 100%, 50%)</h3>
+      <h3>&lt;hsl-color-is-box&gt; <span class="model-value">(value: 200, 100%, 50%)</span></h3>
       <hsl-color-is-box id="picker3" value="200, 100%, 50%" size="300"></hsl-color-is-box>
     </div>
     <div class="panel">
-      <h3>&lt;oklch-color-is-box&gt; (value: 0.700, 0.200, 30.0)</h3>
+      <h3>&lt;oklch-color-is-box&gt; <span class="model-value">(value: 0.700, 0.200, 30.0)</span></h3>
       <oklch-color-is-box id="picker4" value="0.700, 0.200, 30.0" size="300"></oklch-color-is-box>
     </div>
   </div>
@@ -56,6 +56,12 @@
     };
     picker.addEventListener('change', (e) => show(e.detail));
     document.getElementById('setbtn').addEventListener('click', () => { picker.value = '#008fa0'; });
+    // Model cards: keep the (value: ...) label in sync with each picker's current color
+    ['picker2', 'picker3', 'picker4'].forEach((id) => {
+      const el = document.getElementById(id);
+      const label = el.closest('.panel').querySelector('.model-value');
+      el.addEventListener('change', () => { label.textContent = '(value: ' + el.getAttribute('value') + ')'; });
+    });
     setTimeout(() => { out.textContent = 'attribute value: ' + picker.value + '\n(initial — wait for change events)'; }, 300);
   </script>
 </body>
