@@ -182,7 +182,28 @@ export function render(
     drawAxisLabels(ctx, mode, scale, center);
     ctx.restore();
   }
-  // 视角旋转时：灰轴接近正对则画饱和度雷达网格；旋转中浮现环形饱和度盘
+  // 旋转中浮现环形饱和度盘
+  if (satRing && satRing.active && rs.ringAlpha > 0.01) drawSatRing(ctx, scale, center, satRing.rgb, satRing.sat, rs.ringAlpha);
+  // 灰轴（黑↔白体对角线）：旋转后黑白分离才可见；端点色值 0 与 255,255,255
+  if (rs.viewRotating) {
+    const pO = project({ x: 0, y: 0, z: 0 }, scale, center);
+    const pW = project({ x: 1, y: 1, z: 1 }, scale, center);
+    ctx.save();
+    ctx.setLineDash([6, 5]);
+    ctx.strokeStyle = 'rgba(107,114,128,.75)';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(pO.x, pO.y); ctx.lineTo(pW.x, pW.y); ctx.stroke();
+    ctx.restore();
+    // 黑点 / 白点端点
+    ctx.beginPath(); ctx.arc(pO.x, pO.y, 5, 0, Math.PI * 2); ctx.fillStyle = '#111'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.45)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(pW.x, pW.y, 5, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 1; ctx.stroke();
+    // 色值标注
+    ctx.font = '9px monospace';
+    ctx.fillStyle = 'rgba(51,65,85,.85)';
+    ctx.textAlign = 'left';
+    ctx.fillText('0', pO.x + 9, pO.y + 12);
+    ctx.fillText('255,255,255', pW.x + 9, pW.y + 12);
+  }
   // 顶点圆点指示器已移除（drawAxisHandles 不再绘制）
 
   // Draw the color dot on the face
